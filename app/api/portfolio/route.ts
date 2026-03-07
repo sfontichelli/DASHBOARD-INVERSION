@@ -1,5 +1,5 @@
 import { google } from "googleapis"
-import { mapMarchRows } from "@/lib/portfolio-mapper"
+import { mapMarchRows } from "../../../lib/portfolio-mapper"
 
 export async function GET() {
   try {
