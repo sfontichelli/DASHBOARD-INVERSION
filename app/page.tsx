@@ -1,7 +1,18 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from "recharts"
 
 type Row = {
   asset: string
@@ -22,6 +33,12 @@ type DisplayRow = Row & {
   displayValue: number
   displayShare: number
   displayQuantity: number
+}
+
+type SnapshotPoint = {
+  snapshotDate: string
+  label: string
+  portfolioTotal: number
 }
 
 function formatMoney(value: number) {
@@ -126,20 +143,30 @@ function Card({
 
 export default function Page() {
   const [rows, setRows] = useState<Row[]>([])
+  const [history, setHistory] = useState<SnapshotPoint[]>([])
   const [loading, setLoading] = useState(true)
+  const [savingSnapshot, setSavingSnapshot] = useState(false)
   const [showOptions, setShowOptions] = useState(true)
   const [showTargets, setShowTargets] = useState(true)
   const [showLiquidity, setShowLiquidity] = useState(true)
   const [allocationView, setAllocationView] = useState<"asset" | "category">("asset")
 
+  async function loadData() {
+    const [portfolioRes, snapshotRes] = await Promise.all([
+      fetch("/api/portfolio"),
+      fetch("/api/snapshot"),
+    ])
+
+    const portfolioData = await portfolioRes.json()
+    const snapshotData = await snapshotRes.json()
+
+    setRows(portfolioData.rows || [])
+    setHistory(snapshotData.history || [])
+    setLoading(false)
+  }
+
   useEffect(() => {
-    async function load() {
-      const res = await fetch("/api/portfolio")
-      const data = await res.json()
-      setRows(data.rows || [])
-      setLoading(false)
-    }
-    load()
+    loadData()
   }, [])
 
   const visibleRows: DisplayRow[] = useMemo(() => {
@@ -237,6 +264,45 @@ export default function Page() {
       .sort((a, b) => b.value - a.value)
   }, [allocationView, visibleRows])
 
+  const latestSnapshot = history.length ? history[history.length - 1] : null
+  const monthlyChange = latestSnapshot ? portfolioTotal - latestSnapshot.portfolioTotal : 0
+  const monthlyChangePct =
+    latestSnapshot && latestSnapshot.portfolioTotal
+      ? (monthlyChange / latestSnapshot.portfolioTotal) * 100
+      : 0
+
+  const chartData = useMemo(() => {
+    const base = [...history]
+    if (!base.length || base[base.length - 1].portfolioTotal !== portfolioTotal) {
+      base.push({
+        snapshotDate: "actual",
+        label: "Actual",
+        portfolioTotal,
+      })
+    }
+    return base
+  }, [history, portfolioTotal])
+
+  async function handleSaveSnapshot() {
+    try {
+      setSavingSnapshot(true)
+      const res = await fetch("/api/snapshot", {
+        method: "POST",
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        alert(data?.detail || data?.error || "No se pudo guardar el cierre mensual")
+        return
+      }
+
+      await loadData()
+      alert("Cierre mensual guardado correctamente")
+    } finally {
+      setSavingSnapshot(false)
+    }
+  }
+
   if (loading) {
     return (
       <main
@@ -296,7 +362,7 @@ export default function Page() {
             </h1>
             <p style={{ color: "#94a3b8", marginTop: 10, maxWidth: 800 }}>
               Vista principal conectada a Google Sheets, con lectura de exposición con y sin opciones,
-              heatmap semáforo, targets y composición del portfolio.
+              heatmap semáforo, targets, snapshots mensuales e histórico del portfolio.
             </p>
           </div>
 
@@ -342,6 +408,22 @@ export default function Page() {
             >
               Mostrar liquidez {showLiquidity ? "✓" : ""}
             </button>
+
+            <button
+              onClick={handleSaveSnapshot}
+              disabled={savingSnapshot}
+              style={{
+                padding: "12px 16px",
+                borderRadius: 16,
+                border: "1px solid #065f46",
+                background: savingSnapshot ? "#14532d" : "#166534",
+                color: "white",
+                cursor: savingSnapshot ? "default" : "pointer",
+                opacity: savingSnapshot ? 0.7 : 1,
+              }}
+            >
+              {savingSnapshot ? "Guardando..." : "Guardar cierre mensual"}
+            </button>
           </div>
         </div>
 
@@ -357,6 +439,16 @@ export default function Page() {
             value={formatMoney(portfolioTotal)}
             sub={showOptions ? "usa TOTAL del mes activo" : "usa TOTAL SIN OP del mes activo"}
             subColor="#34d399"
+          />
+          <Card
+            title="Variación vs último cierre"
+            value={latestSnapshot ? formatMoney(monthlyChange) : "—"}
+            sub={
+              latestSnapshot
+                ? `${formatPct(monthlyChangePct)} vs ${latestSnapshot.label}`
+                : "todavía no hay snapshots"
+            }
+            subColor={monthlyChange >= 0 ? "#34d399" : "#fca5a5"}
           />
           <Card
             title="Concentración Top 3"
@@ -382,6 +474,77 @@ export default function Page() {
             sub="recorrido capturado hacia targets"
             subColor="#94a3b8"
           />
+        </div>
+
+        <div
+          style={{
+            background: "rgba(15,23,42,0.8)",
+            border: "1px solid #1e293b",
+            borderRadius: 28,
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 16,
+              alignItems: "flex-start",
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Portfolio evolution</h2>
+              <p style={{ color: "#94a3b8", marginTop: 8, marginBottom: 0 }}>
+                Historial mensual basado en snapshots manuales. La línea agrega “Actual” como referencia en vivo.
+              </p>
+            </div>
+            <div style={{ color: "#94a3b8", fontSize: 14 }}>
+              Snapshots guardados: {history.length}
+            </div>
+          </div>
+
+          <div style={{ width: "100%", height: 320, marginTop: 20 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
+                <XAxis dataKey="label" stroke="#94a3b8" />
+                <YAxis
+                  stroke="#94a3b8"
+                  tickFormatter={(value) => `$${Math.round(Number(value) / 1000)}k`}
+                />
+                <Tooltip
+                  content={({ active, payload, label }: any) => {
+                    if (!active || !payload || !payload.length) return null
+                    const value = Number(payload[0].value || 0)
+
+                    return (
+                      <div
+                        style={{
+                          background: "#020617",
+                          border: "1px solid #334155",
+                          borderRadius: 12,
+                          padding: "10px 12px",
+                          boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+                        }}
+                      >
+                        <div style={{ color: "#22d3ee", fontWeight: 700, marginBottom: 6 }}>{label}</div>
+                        <div style={{ color: "#e2e8f0" }}>{formatMoney(value)}</div>
+                      </div>
+                    )
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="portfolioTotal"
+                  stroke="#22d3ee"
+                  strokeWidth={3}
+                  dot={{ fill: "#22d3ee", r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <div
@@ -485,50 +648,50 @@ export default function Page() {
                         ))}
                       </Pie>
                       <Tooltip
-  content={({ active, payload }) => {
-    if (!active || !payload || !payload.length) return null
+                        content={({ active, payload }: any) => {
+                          if (!active || !payload || !payload.length) return null
 
-    const item = payload[0]
-    const name = String(item.name ?? "")
-    const value = Number(item.value ?? 0)
-    const share = portfolioTotal ? (value / portfolioTotal) * 100 : 0
+                          const item = payload[0]
+                          const name = String(item.name ?? "")
+                          const value = Number(item.value ?? 0)
+                          const share = portfolioTotal ? (value / portfolioTotal) * 100 : 0
 
-    return (
-      <div
-        style={{
-          background: "#020617",
-          border: "1px solid #334155",
-          borderRadius: 12,
-          padding: "10px 12px",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-          minWidth: 140,
-        }}
-      >
-        <div
-          style={{
-            color: "#22d3ee",
-            fontWeight: 700,
-            fontSize: 14,
-            marginBottom: 6,
-          }}
-        >
-          {name}
-        </div>
+                          return (
+                            <div
+                              style={{
+                                background: "#020617",
+                                border: "1px solid #334155",
+                                borderRadius: 12,
+                                padding: "10px 12px",
+                                boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+                                minWidth: 140,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  color: "#22d3ee",
+                                  fontWeight: 700,
+                                  fontSize: 14,
+                                  marginBottom: 6,
+                                }}
+                              >
+                                {name}
+                              </div>
 
-        <div
-          style={{
-            color: "#e2e8f0",
-            fontSize: 13,
-            lineHeight: 1.5,
-          }}
-        >
-          <div>{formatMoney(value)}</div>
-          <div>{share.toFixed(1)}% del portfolio</div>
-        </div>
-      </div>
-    )
-  }}
-/>
+                              <div
+                                style={{
+                                  color: "#e2e8f0",
+                                  fontSize: 13,
+                                  lineHeight: 1.5,
+                                }}
+                              >
+                                <div>{formatMoney(value)}</div>
+                                <div>{share.toFixed(1)}% del portfolio</div>
+                              </div>
+                            </div>
+                          )
+                        }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
