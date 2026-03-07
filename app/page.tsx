@@ -485,21 +485,48 @@ export default function Page() {
                         ))}
                       </Pie>
                       <Tooltip
-  formatter={(value: number) => {
-    const share = portfolioTotal ? (Number(value) / portfolioTotal) * 100 : 0
-    return [`${formatMoney(Number(value))} • ${share.toFixed(1)}%`, "Valor"]
-  }}
-  contentStyle={{
-    background: "#020617",
-    border: "1px solid #334155",
-    borderRadius: 12,
-    color: "#ffffff",
-  }}
-  itemStyle={{ color: "#e2e8f0" }}
-  labelStyle={{
-    color: "#22d3ee",
-    fontWeight: 700,
-    fontSize: 14,
+  content={({ active, payload }) => {
+    if (!active || !payload || !payload.length) return null
+
+    const item = payload[0]
+    const name = String(item.name ?? "")
+    const value = Number(item.value ?? 0)
+    const share = portfolioTotal ? (value / portfolioTotal) * 100 : 0
+
+    return (
+      <div
+        style={{
+          background: "#020617",
+          border: "1px solid #334155",
+          borderRadius: 12,
+          padding: "10px 12px",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+          minWidth: 140,
+        }}
+      >
+        <div
+          style={{
+            color: "#22d3ee",
+            fontWeight: 700,
+            fontSize: 14,
+            marginBottom: 6,
+          }}
+        >
+          {name}
+        </div>
+
+        <div
+          style={{
+            color: "#e2e8f0",
+            fontSize: 13,
+            lineHeight: 1.5,
+          }}
+        >
+          <div>{formatMoney(value)}</div>
+          <div>{share.toFixed(1)}% del portfolio</div>
+        </div>
+      </div>
+    )
   }}
 />
                     </PieChart>
