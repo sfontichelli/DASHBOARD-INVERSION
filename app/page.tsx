@@ -219,6 +219,15 @@ export default function Page() {
   const targetUpside = portfolioTotal ? ((targetScenario - portfolioTotal) / portfolioTotal) * 100 : 0
 
   const targetCapture = (() => {
+    // YTD Return
+const firstSnapshot = history?.[0]
+
+const ytdReturn =
+  firstSnapshot && portfolioTotal
+    ? ((portfolioTotal - firstSnapshot.portfolioTotalWithOptions) /
+        firstSnapshot.portfolioTotalWithOptions) *
+      100
+    : 0
     const valid = visibleRows.filter((r) => r.target && r.target > 0)
     if (!valid.length) return 0
     return (
@@ -512,6 +521,12 @@ export default function Page() {
             sub={showOptions ? "usa TOTAL del mes activo" : "usa TOTAL SIN OP del mes activo"}
             subColor="#34d399"
           />
+          <Card
+  title="YTD Return"
+  value={`${ytdReturn.toFixed(1)}%`}
+  sub="rendimiento del año"
+  subColor="#34d399"
+/>
           <Card
             title="Variación vs último cierre"
             value={comparisonSnapshot ? formatMoney(monthlyChange) : "—"}
