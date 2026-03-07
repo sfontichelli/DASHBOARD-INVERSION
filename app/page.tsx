@@ -62,7 +62,7 @@ export default function Page() {
             <tr key={r.asset} style={{borderBottom:"1px solid #222"}}>
               <td>{r.asset}</td>
               <td>{r.category}</td>
-              <td>{r.quantity}</td>
+              <td>{r.quantityDisplay}</td>
               <td>${r.price}</td>
               <td>${r.total.toLocaleString()}</td>
               <td>{r.share}%</td>
