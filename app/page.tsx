@@ -485,15 +485,16 @@ export default function Page() {
                         ))}
                       </Pie>
                       <Tooltip
-                        formatter={(value: number) => formatMoney(Number(value))}
-                        contentStyle={{
-                          background: "#0f172a",
-                          border: "1px solid #334155",
-                          borderRadius: 12,
-                          color: "#e2e8f0",
-                        }}
-                        labelStyle={{ color: "#e2e8f0" }}
-                      />
+  formatter={(value: number) => [formatMoney(Number(value)), "Valor"]}
+  contentStyle={{
+    background: "#0f172a",
+    border: "1px solid #334155",
+    borderRadius: 12,
+    color: "#e2e8f0",
+  }}
+  itemStyle={{ color: "#e2e8f0" }}
+  labelStyle={{ color: "#ffffff", fontWeight: 600 }}
+/>
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
