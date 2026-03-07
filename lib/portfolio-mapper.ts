@@ -36,12 +36,69 @@ export type PortfolioRow = {
   comment: string
 }
 
-export function mapMarchRows(values: string[][]): PortfolioRow[] {
+type MonthKey = "enero" | "febrero" | "marzo"
+
+type MonthConfig = {
+  quantity: number
+  options: number | null
+  price: number
+  total: number
+  share: number
+  totalNoOpt: number | null
+  shareNoOpt: number | null
+  target: number | null
+  comment: number | null
+}
+
+const MONTH_CONFIG: Record<MonthKey, MonthConfig> = {
+  enero: {
+    quantity: 2,       // C
+    options: null,
+    price: 3,          // D
+    total: 4,          // E
+    share: 5,          // F
+    totalNoOpt: null,
+    shareNoOpt: null,
+    target: null,
+    comment: null,
+  },
+  febrero: {
+    quantity: 7,       // H
+    options: 8,        // I
+    price: 9,          // J
+    total: 10,         // K
+    share: 11,         // L
+    totalNoOpt: 12,    // M
+    shareNoOpt: 13,    // N
+    target: null,
+    comment: null,
+  },
+  marzo: {
+    quantity: 14,      // O
+    options: 15,       // P
+    price: 16,         // Q
+    total: 17,         // R
+    share: 18,         // S
+    totalNoOpt: 19,    // T
+    shareNoOpt: 20,    // U
+    target: 21,        // V
+    comment: 22,       // W
+  },
+}
+
+function getCell(row: string[], index: number | null): string {
+  if (index === null) return ""
+  return row[index] ?? ""
+}
+
+export function mapPortfolioRows(values: string[][], monthKey: MonthKey): PortfolioRow[] {
+  const config = MONTH_CONFIG[monthKey]
+
   return values
     .filter((row) => {
       const asset = (row[0] ?? "").trim()
       const category = (row[1] ?? "").trim()
-      const total = row[17] ?? ""
+      const total = getCell(row, config.total)
 
       if (!asset || !category) return false
       if (asset === "ACTIVO") return false
@@ -51,8 +108,20 @@ export function mapMarchRows(values: string[][]): PortfolioRow[] {
       return true
     })
     .map((row) => {
-      const quantitySpot = parseNumber(row[14])     // O
-      const optionsShares = parseNumber(row[15])    // P
+      const quantitySpot = parseNumber(getCell(row, config.quantity))
+      const optionsShares = parseNumber(getCell(row, config.options))
+      const total = parseNumber(getCell(row, config.total))
+      const share = parseNumber(getCell(row, config.share))
+
+      const totalNoOpt =
+        config.totalNoOpt !== null
+          ? parseNumber(getCell(row, config.totalNoOpt))
+          : total
+
+      const shareNoOpt =
+        config.shareNoOpt !== null
+          ? parseNumber(getCell(row, config.shareNoOpt))
+          : share
 
       return {
         asset: (row[0] ?? "").trim(),
@@ -60,13 +129,23 @@ export function mapMarchRows(values: string[][]): PortfolioRow[] {
         quantitySpot,
         optionsShares,
         quantityDisplay: quantitySpot + optionsShares,
-        price: parseNumber(row[16]),          // Q
-        total: parseNumber(row[17]),          // R
-        share: parseNumber(row[18]),          // S
-        totalNoOpt: parseNumber(row[19]),     // T
-        shareNoOpt: parseNumber(row[20]),     // U
-        target: parseNullableNumber(row[21]), // V
-        comment: String(row[22] ?? "").trim() // W
+        price: parseNumber(getCell(row, config.price)),
+        total,
+        share,
+        totalNoOpt,
+        shareNoOpt,
+        target:
+          config.target !== null
+            ? parseNullableNumber(getCell(row, config.target))
+            : null,
+        comment:
+          config.comment !== null
+            ? String(getCell(row, config.comment)).trim()
+            : "",
       }
     })
+}
+
+export function mapMarchRows(values: string[][]): PortfolioRow[] {
+  return mapPortfolioRows(values, "marzo")
 }

@@ -36,9 +36,11 @@ type DisplayRow = Row & {
 }
 
 type SnapshotPoint = {
+  snapshotKey: string
   snapshotDate: string
   label: string
-  portfolioTotal: number
+  portfolioTotalWithOptions: number
+  portfolioTotalWithoutOptions: number
 }
 
 function formatMoney(value: number) {
@@ -144,8 +146,11 @@ function Card({
 export default function Page() {
   const [rows, setRows] = useState<Row[]>([])
   const [history, setHistory] = useState<SnapshotPoint[]>([])
+  const [latestCompositionWithOptions, setLatestCompositionWithOptions] = useState<Record<string, number>>({})
+  const [latestCompositionWithoutOptions, setLatestCompositionWithoutOptions] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [savingSnapshot, setSavingSnapshot] = useState(false)
+  const [backfilling, setBackfilling] = useState(false)
   const [showOptions, setShowOptions] = useState(true)
   const [showTargets, setShowTargets] = useState(true)
   const [showLiquidity, setShowLiquidity] = useState(true)
@@ -162,6 +167,8 @@ export default function Page() {
 
     setRows(portfolioData.rows || [])
     setHistory(snapshotData.history || [])
+    setLatestCompositionWithOptions(snapshotData.latestCompositionWithOptions || {})
+    setLatestCompositionWithoutOptions(snapshotData.latestCompositionWithoutOptions || {})
     setLoading(false)
   }
 
@@ -265,29 +272,67 @@ export default function Page() {
   }, [allocationView, visibleRows])
 
   const latestSnapshot = history.length ? history[history.length - 1] : null
-  const monthlyChange = latestSnapshot ? portfolioTotal - latestSnapshot.portfolioTotal : 0
+  const latestSnapshotValue = latestSnapshot
+    ? showOptions
+      ? latestSnapshot.portfolioTotalWithOptions
+      : latestSnapshot.portfolioTotalWithoutOptions
+    : 0
+
+  const monthlyChange = latestSnapshot ? portfolioTotal - latestSnapshotValue : 0
   const monthlyChangePct =
-    latestSnapshot && latestSnapshot.portfolioTotal
-      ? (monthlyChange / latestSnapshot.portfolioTotal) * 100
+    latestSnapshot && latestSnapshotValue
+      ? (monthlyChange / latestSnapshotValue) * 100
       : 0
 
   const chartData = useMemo(() => {
-    const base = [...history]
+    const base = history.map((point) => ({
+      label: point.label,
+      portfolioTotal: showOptions
+        ? point.portfolioTotalWithOptions
+        : point.portfolioTotalWithoutOptions,
+    }))
+
     if (!base.length || base[base.length - 1].portfolioTotal !== portfolioTotal) {
       base.push({
-        snapshotDate: "actual",
         label: "Actual",
         portfolioTotal,
       })
     }
+
     return base
-  }, [history, portfolioTotal])
+  }, [history, showOptions, portfolioTotal])
+
+  const contributionRows = useMemo(() => {
+    const previousMap = showOptions
+      ? latestCompositionWithOptions
+      : latestCompositionWithoutOptions
+
+    const rowsWithContribution = rows.map((row) => {
+      const previous = previousMap[row.asset] ?? 0
+      const current = showOptions ? row.total : row.totalNoOpt
+      const contribution = current - previous
+
+      return {
+        asset: row.asset,
+        current,
+        previous,
+        contribution,
+      }
+    })
+
+    return rowsWithContribution
+      .filter((row) => row.previous !== 0 || row.current !== 0)
+      .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
+      .slice(0, 8)
+  }, [rows, latestCompositionWithOptions, latestCompositionWithoutOptions, showOptions])
 
   async function handleSaveSnapshot() {
     try {
       setSavingSnapshot(true)
       const res = await fetch("/api/snapshot", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "saveCurrent" }),
       })
       const data = await res.json()
 
@@ -300,6 +345,28 @@ export default function Page() {
       alert("Cierre mensual guardado correctamente")
     } finally {
       setSavingSnapshot(false)
+    }
+  }
+
+  async function handleBackfill2026() {
+    try {
+      setBackfilling(true)
+      const res = await fetch("/api/snapshot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "backfill2026" }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        alert(data?.detail || data?.error || "No se pudo importar 2026")
+        return
+      }
+
+      await loadData()
+      alert("Enero, febrero y marzo 2026 importados correctamente")
+    } finally {
+      setBackfilling(false)
     }
   }
 
@@ -360,7 +427,7 @@ export default function Page() {
             >
               Tracker patrimonial
             </h1>
-            <p style={{ color: "#94a3b8", marginTop: 10, maxWidth: 800 }}>
+            <p style={{ color: "#94a3b8", marginTop: 10, maxWidth: 900 }}>
               Vista principal conectada a Google Sheets, con lectura de exposición con y sin opciones,
               heatmap semáforo, targets, snapshots mensuales e histórico del portfolio.
             </p>
@@ -407,6 +474,22 @@ export default function Page() {
               }}
             >
               Mostrar liquidez {showLiquidity ? "✓" : ""}
+            </button>
+
+            <button
+              onClick={handleBackfill2026}
+              disabled={backfilling}
+              style={{
+                padding: "12px 16px",
+                borderRadius: 16,
+                border: "1px solid #7c3aed",
+                background: backfilling ? "#4c1d95" : "#5b21b6",
+                color: "white",
+                cursor: backfilling ? "default" : "pointer",
+                opacity: backfilling ? 0.7 : 1,
+              }}
+            >
+              {backfilling ? "Importando..." : "Importar Ene-Feb-Mar 2026"}
             </button>
 
             <button
@@ -1034,42 +1117,57 @@ export default function Page() {
               padding: 20,
             }}
           >
-            <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Qué cambia al activar opciones</h2>
+            <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Contribución del mes</h2>
+            <p style={{ color: "#94a3b8", marginTop: 8 }}>
+              Cambio por activo vs el último cierre guardado.
+            </p>
 
-            <div style={{ display: "grid", gap: 14, marginTop: 20 }}>
-              <div
-                style={{
-                  background: "#020617",
-                  border: "1px solid #1e293b",
-                  borderRadius: 20,
-                  padding: 16,
-                }}
-              >
-                <div style={{ color: "#94a3b8", fontSize: 14 }}>Sin opciones</div>
-                <div style={{ color: "white", fontSize: 32, fontWeight: 700, marginTop: 8 }}>
-                  {formatMoney(currentTotalNoOpt)}
+            <div style={{ display: "grid", gap: 12, marginTop: 20 }}>
+              {contributionRows.length ? (
+                contributionRows.map((row) => (
+                  <div
+                    key={row.asset}
+                    style={{
+                      background: "#020617",
+                      border: "1px solid #1e293b",
+                      borderRadius: 18,
+                      padding: 16,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      alignItems: "center",
+                    }}
+                  >
+                    <div>
+                      <div style={{ color: "white", fontWeight: 600 }}>{row.asset}</div>
+                      <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>
+                        {formatMoney(row.previous)} → {formatMoney(row.current)}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        color: row.contribution >= 0 ? "#34d399" : "#fca5a5",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {row.contribution >= 0 ? "+" : "-"}
+                      {formatMoney(Math.abs(row.contribution))}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div
+                  style={{
+                    background: "#020617",
+                    border: "1px solid #1e293b",
+                    borderRadius: 18,
+                    padding: 16,
+                    color: "#94a3b8",
+                  }}
+                >
+                  Guardá o importá snapshots para ver contribuciones.
                 </div>
-                <div style={{ color: "#94a3b8", fontSize: 14, marginTop: 8 }}>
-                  Toma TOTAL SIN OP del mes activo.
-                </div>
-              </div>
-
-              <div
-                style={{
-                  background: "rgba(34,211,238,0.08)",
-                  border: "1px solid rgba(34,211,238,0.22)",
-                  borderRadius: 20,
-                  padding: 16,
-                }}
-              >
-                <div style={{ color: "#67e8f9", fontSize: 14 }}>Con opciones</div>
-                <div style={{ color: "white", fontSize: 32, fontWeight: 700, marginTop: 8 }}>
-                  {formatMoney(currentTotalWithOpt)}
-                </div>
-                <div style={{ color: "#cbd5e1", fontSize: 14, marginTop: 8 }}>
-                  Toma TOTAL del mes activo.
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
