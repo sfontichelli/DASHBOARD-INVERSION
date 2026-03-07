@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
 
 type Row = {
   asset: string
@@ -15,6 +16,12 @@ type Row = {
   shareNoOpt: number
   target: number | null
   comment: string
+}
+
+type DisplayRow = Row & {
+  displayValue: number
+  displayShare: number
+  displayQuantity: number
 }
 
 function formatMoney(value: number) {
@@ -65,6 +72,18 @@ function getHeatConfig(share: number) {
     label: "Baja",
   }
 }
+
+const CHART_COLORS = [
+  "#22d3ee",
+  "#ef4444",
+  "#fbbf24",
+  "#6366f1",
+  "#14b8a6",
+  "#f97316",
+  "#8b5cf6",
+  "#84cc16",
+  "#e879f9",
+]
 
 function Card({
   title,
@@ -123,7 +142,7 @@ export default function Page() {
     load()
   }, [])
 
-  const visibleRows = useMemo(() => {
+  const visibleRows: DisplayRow[] = useMemo(() => {
     return rows
       .filter((r) => (showLiquidity ? true : r.category.toUpperCase() !== "LIQUIDEZ"))
       .map((r) => ({
@@ -191,6 +210,33 @@ export default function Page() {
       .sort((a, b) => b.value - a.value)
   }, [allocationView, visibleRows])
 
+  const donutData = useMemo(() => {
+    if (allocationView === "asset") {
+      const sorted = [...visibleRows].sort((a, b) => b.displayValue - a.displayValue)
+      const top = sorted.slice(0, 8).map((row) => ({
+        name: row.asset,
+        value: row.displayValue,
+      }))
+
+      const otherValue = sorted.slice(8).reduce((acc, row) => acc + row.displayValue, 0)
+
+      if (otherValue > 0) {
+        top.push({ name: "Otros", value: otherValue })
+      }
+
+      return top
+    }
+
+    const grouped: Record<string, number> = {}
+    visibleRows.forEach((row) => {
+      grouped[row.category] = (grouped[row.category] || 0) + row.displayValue
+    })
+
+    return Object.entries(grouped)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+  }, [allocationView, visibleRows])
+
   if (loading) {
     return (
       <main
@@ -218,7 +264,6 @@ export default function Page() {
       }}
     >
       <div style={{ maxWidth: 1400, margin: "0 auto", display: "grid", gap: 24 }}>
-        {/* Header */}
         <div
           style={{
             display: "flex",
@@ -300,7 +345,6 @@ export default function Page() {
           </div>
         </div>
 
-        {/* KPI cards */}
         <div
           style={{
             display: "grid",
@@ -340,7 +384,6 @@ export default function Page() {
           />
         </div>
 
-        {/* Composition + advanced metrics */}
         <div
           style={{
             display: "grid",
@@ -418,32 +461,59 @@ export default function Page() {
                   background: "#020617",
                   border: "1px solid #1e293b",
                   borderRadius: 28,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
                   position: "relative",
+                  overflow: "hidden",
                 }}
               >
-                <div
-                  style={{
-                    width: 240,
-                    height: 240,
-                    borderRadius: "50%",
-                    borderTop: "40px solid rgba(34,211,238,0.75)",
-                    borderRight: "40px solid rgba(239,68,68,0.65)",
-                    borderBottom: "40px solid rgba(251,191,36,0.8)",
-                    borderLeft: "40px solid rgba(99,102,241,0.7)",
-                    transform: "rotate(12deg)",
-                  }}
-                />
+                <div style={{ width: "100%", height: 320 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={donutData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={85}
+                        outerRadius={120}
+                        paddingAngle={2}
+                        stroke="none"
+                      >
+                        {donutData.map((entry, index) => (
+                          <Cell
+                            key={`cell-${entry.name}`}
+                            fill={CHART_COLORS[index % CHART_COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number) => formatMoney(Number(value))}
+                        contentStyle={{
+                          background: "#0f172a",
+                          border: "1px solid #334155",
+                          borderRadius: 12,
+                          color: "#e2e8f0",
+                        }}
+                        labelStyle={{ color: "#e2e8f0" }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
                 <div
                   style={{
                     position: "absolute",
-                    textAlign: "center",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    pointerEvents: "none",
                   }}
                 >
-                  <div style={{ fontSize: 14, color: "#94a3b8" }}>Allocation</div>
-                  <div style={{ fontSize: 28, color: "white", fontWeight: 700 }}>Marzo</div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 14, color: "#94a3b8" }}>Allocation</div>
+                    <div style={{ fontSize: 28, color: "white", fontWeight: 700 }}>
+                      {allocationView === "asset" ? "Activos" : "Categorías"}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -520,7 +590,6 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Table */}
         <div
           style={{
             background: "rgba(15,23,42,0.8)",
@@ -609,7 +678,6 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Lower blocks */}
         <div
           style={{
             display: "grid",
@@ -617,7 +685,6 @@ export default function Page() {
             gap: 24,
           }}
         >
-          {/* Targets tracker */}
           <div
             style={{
               background: "rgba(15,23,42,0.8)",
@@ -682,7 +749,6 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Heatmap */}
           <div
             style={{
               background: "rgba(15,23,42,0.8)",
@@ -762,7 +828,6 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Options comparison */}
           <div
             style={{
               background: "rgba(15,23,42,0.8)",
@@ -811,7 +876,6 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Target scenario */}
         <div
           style={{
             background: "rgba(15,23,42,0.8)",
