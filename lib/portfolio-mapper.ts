@@ -24,8 +24,9 @@ function parseNullableNumber(value: unknown): number | null {
 export type PortfolioRow = {
   asset: string
   category: string
-  quantity: number
-  options: number
+  quantitySpot: number
+  optionsShares: number
+  quantityDisplay: number
   price: number
   total: number
   share: number
@@ -40,7 +41,7 @@ export function mapMarchRows(values: string[][]): PortfolioRow[] {
     .filter((row) => {
       const asset = (row[0] ?? "").trim()
       const category = (row[1] ?? "").trim()
-      const total = row[17] ?? "" // R
+      const total = row[17] ?? ""
 
       if (!asset || !category) return false
       if (asset === "ACTIVO") return false
@@ -49,17 +50,23 @@ export function mapMarchRows(values: string[][]): PortfolioRow[] {
 
       return true
     })
-    .map((row) => ({
-      asset: (row[0] ?? "").trim(),
-      category: (row[1] ?? "").trim(),
-      quantity: parseNumber(row[14]),     // O
-      options: parseNumber(row[15]),      // P
-      price: parseNumber(row[16]),        // Q
-      total: parseNumber(row[17]),        // R
-      share: parseNumber(row[18]),        // S
-      totalNoOpt: parseNumber(row[19]),   // T
-      shareNoOpt: parseNumber(row[20]),   // U
-      target: parseNullableNumber(row[21]), // V
-      comment: String(row[22] ?? "").trim(), // W
-    }))
+    .map((row) => {
+      const quantitySpot = parseNumber(row[14])     // O
+      const optionsShares = parseNumber(row[15])    // P
+
+      return {
+        asset: (row[0] ?? "").trim(),
+        category: (row[1] ?? "").trim(),
+        quantitySpot,
+        optionsShares,
+        quantityDisplay: quantitySpot + optionsShares,
+        price: parseNumber(row[16]),          // Q
+        total: parseNumber(row[17]),          // R
+        share: parseNumber(row[18]),          // S
+        totalNoOpt: parseNumber(row[19]),     // T
+        shareNoOpt: parseNumber(row[20]),     // U
+        target: parseNullableNumber(row[21]), // V
+        comment: String(row[22] ?? "").trim() // W
+      }
+    })
 }
