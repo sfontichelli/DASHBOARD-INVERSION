@@ -43,6 +43,14 @@ type SnapshotPoint = {
   portfolioTotalWithoutOptions: number
 }
 
+type SnapshotCompositionMap = Record<
+  string,
+  {
+    withOptions: Record<string, number>
+    withoutOptions: Record<string, number>
+  }
+>
+
 function formatMoney(value: number) {
   return `$${Math.round(value).toLocaleString("es-AR")}`
 }
@@ -146,11 +154,9 @@ function Card({
 export default function Page() {
   const [rows, setRows] = useState<Row[]>([])
   const [history, setHistory] = useState<SnapshotPoint[]>([])
-  const [latestCompositionWithOptions, setLatestCompositionWithOptions] = useState<Record<string, number>>({})
-  const [latestCompositionWithoutOptions, setLatestCompositionWithoutOptions] = useState<Record<string, number>>({})
+  const [compositionsBySnapshot, setCompositionsBySnapshot] = useState<SnapshotCompositionMap>({})
   const [loading, setLoading] = useState(true)
   const [savingSnapshot, setSavingSnapshot] = useState(false)
-  const [backfilling, setBackfilling] = useState(false)
   const [showOptions, setShowOptions] = useState(true)
   const [showTargets, setShowTargets] = useState(true)
   const [showLiquidity, setShowLiquidity] = useState(true)
@@ -167,8 +173,7 @@ export default function Page() {
 
     setRows(portfolioData.rows || [])
     setHistory(snapshotData.history || [])
-    setLatestCompositionWithOptions(snapshotData.latestCompositionWithOptions || {})
-    setLatestCompositionWithoutOptions(snapshotData.latestCompositionWithoutOptions || {})
+    setCompositionsBySnapshot(snapshotData.compositionsBySnapshot || {})
     setLoading(false)
   }
 
@@ -271,17 +276,33 @@ export default function Page() {
       .sort((a, b) => b.value - a.value)
   }, [allocationView, visibleRows])
 
-  const latestSnapshot = history.length ? history[history.length - 1] : null
-  const latestSnapshotValue = latestSnapshot
+  const currentMonthKey = useMemo(() => {
+    const now = new Date()
+    return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`
+  }, [])
+
+  const comparisonSnapshot = useMemo(() => {
+    if (!history.length) return null
+
+    const last = history[history.length - 1]
+
+    if (last.snapshotKey === currentMonthKey && history.length > 1) {
+      return history[history.length - 2]
+    }
+
+    return last
+  }, [history, currentMonthKey])
+
+  const comparisonSnapshotValue = comparisonSnapshot
     ? showOptions
-      ? latestSnapshot.portfolioTotalWithOptions
-      : latestSnapshot.portfolioTotalWithoutOptions
+      ? comparisonSnapshot.portfolioTotalWithOptions
+      : comparisonSnapshot.portfolioTotalWithoutOptions
     : 0
 
-  const monthlyChange = latestSnapshot ? portfolioTotal - latestSnapshotValue : 0
+  const monthlyChange = comparisonSnapshot ? portfolioTotal - comparisonSnapshotValue : 0
   const monthlyChangePct =
-    latestSnapshot && latestSnapshotValue
-      ? (monthlyChange / latestSnapshotValue) * 100
+    comparisonSnapshot && comparisonSnapshotValue
+      ? (monthlyChange / comparisonSnapshotValue) * 100
       : 0
 
   const chartData = useMemo(() => {
@@ -302,10 +323,16 @@ export default function Page() {
     return base
   }, [history, showOptions, portfolioTotal])
 
+  const comparisonComposition = comparisonSnapshot
+    ? compositionsBySnapshot[comparisonSnapshot.snapshotKey]
+    : null
+
   const contributionRows = useMemo(() => {
-    const previousMap = showOptions
-      ? latestCompositionWithOptions
-      : latestCompositionWithoutOptions
+    const previousMap = comparisonComposition
+      ? showOptions
+        ? comparisonComposition.withOptions
+        : comparisonComposition.withoutOptions
+      : {}
 
     const rowsWithContribution = rows.map((row) => {
       const previous = previousMap[row.asset] ?? 0
@@ -324,7 +351,7 @@ export default function Page() {
       .filter((row) => row.previous !== 0 || row.current !== 0)
       .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
       .slice(0, 8)
-  }, [rows, latestCompositionWithOptions, latestCompositionWithoutOptions, showOptions])
+  }, [rows, comparisonComposition, showOptions])
 
   async function handleSaveSnapshot() {
     try {
@@ -345,28 +372,6 @@ export default function Page() {
       alert("Cierre mensual guardado correctamente")
     } finally {
       setSavingSnapshot(false)
-    }
-  }
-
-  async function handleBackfill2026() {
-    try {
-      setBackfilling(true)
-      const res = await fetch("/api/snapshot", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "backfill2026" }),
-      })
-      const data = await res.json()
-
-      if (!res.ok) {
-        alert(data?.detail || data?.error || "No se pudo importar 2026")
-        return
-      }
-
-      await loadData()
-      alert("Enero, febrero y marzo 2026 importados correctamente")
-    } finally {
-      setBackfilling(false)
     }
   }
 
@@ -477,22 +482,6 @@ export default function Page() {
             </button>
 
             <button
-              onClick={handleBackfill2026}
-              disabled={backfilling}
-              style={{
-                padding: "12px 16px",
-                borderRadius: 16,
-                border: "1px solid #7c3aed",
-                background: backfilling ? "#4c1d95" : "#5b21b6",
-                color: "white",
-                cursor: backfilling ? "default" : "pointer",
-                opacity: backfilling ? 0.7 : 1,
-              }}
-            >
-              {backfilling ? "Importando..." : "Importar Ene-Feb-Mar 2026"}
-            </button>
-
-            <button
               onClick={handleSaveSnapshot}
               disabled={savingSnapshot}
               style={{
@@ -525,10 +514,10 @@ export default function Page() {
           />
           <Card
             title="Variación vs último cierre"
-            value={latestSnapshot ? formatMoney(monthlyChange) : "—"}
+            value={comparisonSnapshot ? formatMoney(monthlyChange) : "—"}
             sub={
-              latestSnapshot
-                ? `${formatPct(monthlyChangePct)} vs ${latestSnapshot.label}`
+              comparisonSnapshot
+                ? `${formatPct(monthlyChangePct)} vs ${comparisonSnapshot.label}`
                 : "todavía no hay snapshots"
             }
             subColor={monthlyChange >= 0 ? "#34d399" : "#fca5a5"}
@@ -1119,7 +1108,7 @@ export default function Page() {
           >
             <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Contribución del mes</h2>
             <p style={{ color: "#94a3b8", marginTop: 8 }}>
-              Cambio por activo vs el último cierre guardado.
+              Cambio por activo vs el cierre de referencia.
             </p>
 
             <div style={{ display: "grid", gap: 12, marginTop: 20 }}>
@@ -1165,7 +1154,7 @@ export default function Page() {
                     color: "#94a3b8",
                   }}
                 >
-                  Guardá o importá snapshots para ver contribuciones.
+                  Guardá snapshots para ver contribuciones.
                 </div>
               )}
             </div>
