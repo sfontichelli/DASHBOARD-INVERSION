@@ -1,4 +1,5 @@
 import { google } from "googleapis"
+import { mapMarchRows } from "@/lib/portfolio-mapper"
 
 export async function GET() {
   try {
@@ -27,9 +28,13 @@ export async function GET() {
       range: `${sheetName}!A:W`,
     })
 
+    const rawRows = (res.data.values ?? []) as string[][]
+    const rows = mapMarchRows(rawRows)
+
     return Response.json({
       ok: true,
-      rows: res.data.values ?? [],
+      count: rows.length,
+      rows,
     })
   } catch (error: any) {
     return Response.json(
