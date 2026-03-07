@@ -1,56 +1,47 @@
 import { google } from "googleapis"
+import { mapMarchRows } from "../../../lib/portfolio-mapper"
 
 export async function GET() {
   try {
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: process.env.GOOGLE_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-      },
+    const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
+    const privateKey = process.env.GOOGLE_PRIVATE_KEY
+    const spreadsheetId = process.env.GOOGLE_SHEETS_ID
+    const portfolioSheetName = process.env.PORTFOLIO_SHEET_NAME || "ACTIVOS"
+
+    if (!clientEmail || !privateKey || !spreadsheetId) {
+      return Response.json(
+        { error: "Faltan variables de entorno de Google Sheets" },
+        { status: 500 }
+      )
+    }
+
+    const auth = new google.auth.JWT({
+      email: clientEmail,
+      key: privateKey,
       scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
     })
 
     const sheets = google.sheets({ version: "v4", auth })
 
-    const spreadsheetId = process.env.GOOGLE_SHEET_ID
-
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "DATA!A1:Z100",
+      range: `${portfolioSheetName}!A:W`,
     })
 
-    const rows = res.data.values || []
-    const headers = rows[0]
-    const data = rows.slice(1)
-
-    const result = data.map((row) => {
-      const obj: any = {}
-
-      headers.forEach((h, i) => {
-        obj[h] = row[i]
-      })
-
-      return {
-        asset: obj.asset,
-        category: obj.category,
-        quantitySpot: Number(obj.quantitySpot || 0),
-        optionsShares: Number(obj.optionsShares || 0),
-        quantityDisplay: Number(obj.quantityDisplay || 0),
-        price: Number(obj.price || 0),
-        total: Number(obj.total || 0),
-        share: Number(obj.share || 0),
-        totalNoOpt: Number(obj.totalNoOpt || 0),
-        shareNoOpt: Number(obj.shareNoOpt || 0),
-        target: obj.target ? Number(obj.target) : null,
-        comment: obj.comment || "",
-      }
-    })
+    const values = (res.data.values ?? []) as string[][]
+    const rows = mapMarchRows(values)
 
     return Response.json({
-      rows: result,
+      ok: true,
+      rows,
     })
-  } catch (error) {
-    console.error(error)
-    return Response.json({ error: "Error loading portfolio" })
+  } catch (error: any) {
+    return Response.json(
+      {
+        error: "Error loading portfolio",
+        detail: error?.message || "Unknown error",
+      },
+      { status: 500 }
+    )
   }
 }
