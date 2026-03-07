@@ -5,7 +5,9 @@ import { useEffect, useState } from "react"
 type Row = {
   asset: string
   category: string
-  quantity: number
+  quantitySpot: number
+  optionsShares: number
+  quantityDisplay: number
   price: number
   total: number
   share: number
