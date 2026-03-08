@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type CSSProperties } from "react"
 import {
   PieChart,
   Pie,
@@ -51,6 +51,88 @@ type SnapshotCompositionMap = Record<
   }
 >
 
+type PerformancePoint = {
+  date: string
+  value: number
+  label: string
+}
+
+const SECTION_STYLE: CSSProperties = {
+  background: "rgba(15,23,42,0.8)",
+  border: "1px solid #1e293b",
+  borderRadius: 28,
+  padding: 20,
+}
+
+const INNER_CARD_STYLE: CSSProperties = {
+  background: "#020617",
+  border: "1px solid #1e293b",
+  borderRadius: 20,
+  padding: 16,
+}
+
+function parseDateSafe(value: string) {
+  if (!value) return null
+
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00Z` : value
+  const date = new Date(normalized)
+
+  if (Number.isNaN(date.getTime())) return null
+  return date
+}
+
+function getYearsBetween(startDate: string, endDate: string) {
+  const start = parseDateSafe(startDate)?.getTime()
+  const end = parseDateSafe(endDate)?.getTime()
+
+  if (!start || !end || end <= start) return 0
+
+  return (end - start) / (365.25 * 24 * 60 * 60 * 1000)
+}
+
+function getAnnualizedReturn(startValue: number, endValue: number, years: number) {
+  if (!startValue || startValue <= 0 || !endValue || endValue <= 0 || years <= 0) return null
+  return (Math.pow(endValue / startValue, 1 / years) - 1) * 100
+}
+
+function findClosestPointToDate(points: PerformancePoint[], targetDate: Date) {
+  if (!points.length) return null
+
+  let best = points[0]
+  let bestDistance = Math.abs((parseDateSafe(points[0].date)?.getTime() || 0) - targetDate.getTime())
+
+  for (const point of points) {
+    const pointTime = parseDateSafe(point.date)?.getTime()
+    if (!pointTime) continue
+
+    const distance = Math.abs(pointTime - targetDate.getTime())
+    if (distance < bestDistance) {
+      best = point
+      bestDistance = distance
+    }
+  }
+
+  return best
+}
+
+function findPointAtOrBefore(points: PerformancePoint[], targetDate: Date) {
+  const sorted = [...points].sort(
+    (a, b) => (parseDateSafe(a.date)?.getTime() || 0) - (parseDateSafe(b.date)?.getTime() || 0)
+  )
+
+  let candidate: PerformancePoint | null = null
+
+  for (const point of sorted) {
+    const pointDate = parseDateSafe(point.date)
+    if (!pointDate) continue
+    if (pointDate <= targetDate) {
+      candidate = point
+    }
+  }
+
+  return candidate
+}
+
 function formatMoney(value: number, privacyMode?: boolean) {
   if (privacyMode) return "$*****"
   return `$${Math.round(value).toLocaleString("es-AR")}`
@@ -58,6 +140,18 @@ function formatMoney(value: number, privacyMode?: boolean) {
 
 function formatPct(value: number) {
   return `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`
+}
+
+function formatPctOrDash(value: number | null) {
+  if (value === null || Number.isNaN(value)) return "—"
+  return `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`
+}
+
+function getValueColor(value: number | null, positive = "#34d399", negative = "#f87171", neutral = "white") {
+  if (value === null || Number.isNaN(value)) return neutral
+  if (value > 0) return positive
+  if (value < 0) return negative
+  return neutral
 }
 
 function getHeatConfig(share: number) {
@@ -118,11 +212,13 @@ function Card({
   value,
   sub,
   subColor = "#94a3b8",
+  valueColor = "white",
 }: {
   title: string
   value: string
   sub?: string
   subColor?: string
+  valueColor?: string
 }) {
   return (
     <div
@@ -140,7 +236,7 @@ function Card({
           fontSize: 32,
           fontWeight: 700,
           marginTop: 10,
-          color: "white",
+          color: valueColor,
         }}
       >
         {value}
@@ -148,6 +244,44 @@ function Card({
       {sub ? (
         <div style={{ fontSize: 14, marginTop: 10, color: subColor }}>{sub}</div>
       ) : null}
+    </div>
+  )
+}
+
+function MiniMetric({
+  title,
+  value,
+  sub,
+  accent = "#22d3ee",
+  valueColor = "white",
+}: {
+  title: string
+  value: string
+  sub: string
+  accent?: string
+  valueColor?: string
+}) {
+  return (
+    <div
+      style={{
+        ...INNER_CARD_STYLE,
+        borderRadius: 18,
+        padding: 14,
+      }}
+    >
+      <div style={{ fontSize: 13, color: "#94a3b8" }}>{title}</div>
+      <div
+        style={{
+          marginTop: 10,
+          fontSize: 24,
+          lineHeight: 1.1,
+          fontWeight: 700,
+          color: valueColor,
+        }}
+      >
+        {value}
+      </div>
+      <div style={{ marginTop: 10, fontSize: 12, color: accent }}>{sub}</div>
     </div>
   )
 }
@@ -183,6 +317,16 @@ export default function Page() {
     loadData()
   }, [])
 
+  const sortedHistory = useMemo(() => {
+    return [...history]
+      .filter((item) => parseDateSafe(item.snapshotDate))
+      .sort(
+        (a, b) =>
+          (parseDateSafe(a.snapshotDate)?.getTime() || 0) -
+          (parseDateSafe(b.snapshotDate)?.getTime() || 0)
+      )
+  }, [history])
+
   const visibleRows: DisplayRow[] = useMemo(() => {
     return rows
       .filter((r) => (showLiquidity ? true : r.category.toUpperCase() !== "LIQUIDEZ"))
@@ -196,30 +340,6 @@ export default function Page() {
   }, [rows, showLiquidity, showOptions])
 
   const portfolioTotal = visibleRows.reduce((acc, row) => acc + row.displayValue, 0)
-
-  const firstSnapshot = history?.[0]
-  const ytdReturn =
-    firstSnapshot &&
-    (showOptions
-      ? firstSnapshot.portfolioTotalWithOptions
-      : firstSnapshot.portfolioTotalWithoutOptions)
-      ? ((portfolioTotal -
-          (showOptions
-            ? firstSnapshot.portfolioTotalWithOptions
-            : firstSnapshot.portfolioTotalWithoutOptions)) /
-          (showOptions
-            ? firstSnapshot.portfolioTotalWithOptions
-            : firstSnapshot.portfolioTotalWithoutOptions)) *
-        100
-      : 0
-
-  const currentTotalWithOpt = rows
-    .filter((r) => (showLiquidity ? true : r.category.toUpperCase() !== "LIQUIDEZ"))
-    .reduce((acc, row) => acc + row.total, 0)
-
-  const currentTotalNoOpt = rows
-    .filter((r) => (showLiquidity ? true : r.category.toUpperCase() !== "LIQUIDEZ"))
-    .reduce((acc, row) => acc + row.totalNoOpt, 0)
 
   const liquidityTotal = rows
     .filter((r) => r.category.toUpperCase() === "LIQUIDEZ")
@@ -241,9 +361,12 @@ export default function Page() {
   const targetCapture = (() => {
     const valid = visibleRows.filter((r) => r.target && r.target > 0)
     if (!valid.length) return 0
+
     return (
       valid.reduce((acc, row) => {
-        const progress = Math.min((row.price / (row.target || row.price)) * 100, 100)
+        const baseTarget = row.target || row.price
+        if (!baseTarget || baseTarget <= 0) return acc
+        const progress = Math.min((row.price / baseTarget) * 100, 100)
         return acc + progress
       }, 0) / valid.length
     )
@@ -302,16 +425,16 @@ export default function Page() {
   }, [])
 
   const comparisonSnapshot = useMemo(() => {
-    if (!history.length) return null
+    if (!sortedHistory.length) return null
 
-    const last = history[history.length - 1]
+    const last = sortedHistory[sortedHistory.length - 1]
 
-    if (last.snapshotKey === currentMonthKey && history.length > 1) {
-      return history[history.length - 2]
+    if (last.snapshotKey === currentMonthKey && sortedHistory.length > 1) {
+      return sortedHistory[sortedHistory.length - 2]
     }
 
     return last
-  }, [history, currentMonthKey])
+  }, [sortedHistory, currentMonthKey])
 
   const comparisonSnapshotValue = comparisonSnapshot
     ? showOptions
@@ -325,49 +448,127 @@ export default function Page() {
       ? (monthlyChange / comparisonSnapshotValue) * 100
       : 0
 
-  const portfolioSeries = history.map((h) =>
-    showOptions ? h.portfolioTotalWithOptions : h.portfolioTotalWithoutOptions
-  )
+  const performancePoints = useMemo<PerformancePoint[]>(() => {
+    const snapshotPoints = sortedHistory.map((h) => ({
+      date: h.snapshotDate,
+      label: h.label,
+      value: showOptions ? h.portfolioTotalWithOptions : h.portfolioTotalWithoutOptions,
+    }))
+
+    const currentDate = new Date()
+    const currentPoint: PerformancePoint = {
+      date: currentDate.toISOString(),
+      label: "Actual",
+      value: portfolioTotal,
+    }
+
+    const lastSnapshot = snapshotPoints[snapshotPoints.length - 1]
+    if (!lastSnapshot) return [currentPoint]
+
+    const lastSnapshotDate = parseDateSafe(lastSnapshot.date)
+    const isSameDay =
+      !!lastSnapshotDate &&
+      lastSnapshotDate.getUTCFullYear() === currentDate.getUTCFullYear() &&
+      lastSnapshotDate.getUTCMonth() === currentDate.getUTCMonth() &&
+      lastSnapshotDate.getUTCDate() === currentDate.getUTCDate()
+
+    if (isSameDay && lastSnapshot.value === portfolioTotal) {
+      return snapshotPoints
+    }
+
+    return [...snapshotPoints, currentPoint]
+  }, [sortedHistory, showOptions, portfolioTotal])
+
+  const chartData = useMemo(() => {
+    return performancePoints.map((point) => ({
+      label: point.label,
+      portfolioTotal: point.value,
+    }))
+  }, [performancePoints])
+
+  const portfolioSeries = performancePoints.map((p) => p.value).filter((v) => v > 0)
 
   let peak = -Infinity
   let maxDrawdown = 0
 
   for (const v of portfolioSeries) {
     if (v > peak) peak = v
-    const dd = (v - peak) / peak
-    if (dd < maxDrawdown) maxDrawdown = dd
+    if (peak > 0) {
+      const dd = (v - peak) / peak
+      if (dd < maxDrawdown) maxDrawdown = dd
+    }
   }
 
   const maxDrawdownPct = maxDrawdown * 100
 
-  let cagr = 0
-  if (history.length > 0) {
-    const first = showOptions
-      ? history[0].portfolioTotalWithOptions
-      : history[0].portfolioTotalWithoutOptions
-    const years = history.length / 12
-    if (first && years > 0) {
-      cagr = (Math.pow(portfolioTotal / first, 1 / years) - 1) * 100
-    }
-  }
+  const cagrSinceStart = useMemo(() => {
+    if (performancePoints.length < 2) return null
+    const first = performancePoints[0]
+    const last = performancePoints[performancePoints.length - 1]
+    const years = getYearsBetween(first.date, last.date)
+    return getAnnualizedReturn(first.value, last.value, years)
+  }, [performancePoints])
 
-  const chartData = useMemo(() => {
-    const base = history.map((point) => ({
-      label: point.label,
-      portfolioTotal: showOptions
-        ? point.portfolioTotalWithOptions
-        : point.portfolioTotalWithoutOptions,
-    }))
+  const cagr12m = useMemo(() => {
+    if (performancePoints.length < 2) return null
 
-    if (!base.length || base[base.length - 1].portfolioTotal !== portfolioTotal) {
-      base.push({
-        label: "Actual",
-        portfolioTotal,
-      })
-    }
+    const latest = performancePoints[performancePoints.length - 1]
+    const latestDate = parseDateSafe(latest.date)
+    if (!latestDate) return null
 
-    return base
-  }, [history, showOptions, portfolioTotal])
+    const startWindow = new Date(latestDate)
+    startWindow.setUTCFullYear(startWindow.getUTCFullYear() - 1)
+
+    const yearsAvailable = getYearsBetween(performancePoints[0].date, latest.date)
+    if (yearsAvailable < 0.75) return null
+
+    const basePoint =
+      findPointAtOrBefore(performancePoints, startWindow) ||
+      findClosestPointToDate(performancePoints, startWindow)
+
+    if (!basePoint) return null
+
+    const years = getYearsBetween(basePoint.date, latest.date)
+    return getAnnualizedReturn(basePoint.value, latest.value, years)
+  }, [performancePoints])
+
+  const cagr3y = useMemo(() => {
+    if (performancePoints.length < 2) return null
+
+    const latest = performancePoints[performancePoints.length - 1]
+    const latestDate = parseDateSafe(latest.date)
+    if (!latestDate) return null
+
+    const startWindow = new Date(latestDate)
+    startWindow.setUTCFullYear(startWindow.getUTCFullYear() - 3)
+
+    const yearsAvailable = getYearsBetween(performancePoints[0].date, latest.date)
+    if (yearsAvailable < 2.5) return null
+
+    const basePoint =
+      findPointAtOrBefore(performancePoints, startWindow) ||
+      findClosestPointToDate(performancePoints, startWindow)
+
+    if (!basePoint) return null
+
+    const years = getYearsBetween(basePoint.date, latest.date)
+    return getAnnualizedReturn(basePoint.value, latest.value, years)
+  }, [performancePoints])
+
+  const ytdReturn = useMemo(() => {
+    if (!performancePoints.length) return 0
+
+    const now = new Date()
+    const startOfYear = new Date(Date.UTC(now.getUTCFullYear(), 0, 1, 0, 0, 0))
+
+    const latest = performancePoints[performancePoints.length - 1]
+    const basePoint =
+      findPointAtOrBefore(performancePoints, startOfYear) ||
+      findClosestPointToDate(performancePoints, startOfYear)
+
+    if (!basePoint || !basePoint.value) return 0
+    return ((latest.value - basePoint.value) / basePoint.value) * 100
+  }, [performancePoints])
 
   const comparisonComposition = comparisonSnapshot
     ? compositionsBySnapshot[comparisonSnapshot.snapshotKey]
@@ -479,7 +680,7 @@ export default function Page() {
               Tracker patrimonial
             </h1>
             <p style={{ color: "#94a3b8", marginTop: 10, maxWidth: 900 }}>
-              Vista principal conectada a Google Sheets, con lectura de exposición con y sin opciones,
+              Vista principal conectada a Google Sheets, con exposición con y sin opciones,
               heatmap semáforo, targets, snapshots mensuales e histórico del portfolio.
             </p>
           </div>
@@ -568,14 +769,7 @@ export default function Page() {
           }}
         >
           <div style={{ display: "grid", gap: 20 }}>
-            <div
-              style={{
-                background: "rgba(15,23,42,0.8)",
-                border: "1px solid #1e293b",
-                borderRadius: 28,
-                padding: 20,
-              }}
-            >
+            <div style={SECTION_STYLE}>
               <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Performance</h2>
 
               <div
@@ -589,7 +783,7 @@ export default function Page() {
                 <Card
                   title="Portfolio Value"
                   value={formatMoney(portfolioTotal, privacyMode)}
-                  sub={showOptions ? "usa TOTAL del mes activo" : "usa TOTAL SIN OP del mes activo"}
+                  sub={showOptions ? "incluye exposición con opciones" : "solo exposición spot"}
                   subColor="#34d399"
                 />
 
@@ -599,70 +793,97 @@ export default function Page() {
                   sub={
                     comparisonSnapshot
                       ? `${formatPct(monthlyChangePct)} vs ${comparisonSnapshot.label}`
-                      : "todavía no hay snapshots"
+                      : "todavía no hay cierres guardados"
                   }
-                  subColor={monthlyChange >= 0 ? "#34d399" : "#fca5a5"}
+                  subColor={getValueColor(monthlyChange, "#34d399", "#f87171", "#94a3b8")}
+                  valueColor={getValueColor(monthlyChange, "#34d399", "#f87171", "white")}
                 />
 
                 <Card
                   title="YTD Return"
-                  value={`${ytdReturn.toFixed(1)}%`}
-                  sub="rendimiento del año"
-                  subColor="#34d399"
+                  value={formatPct(ytdReturn)}
+                  sub="rendimiento acumulado del año"
+                  subColor={getValueColor(ytdReturn, "#34d399", "#f87171", "#94a3b8")}
+                  valueColor={getValueColor(ytdReturn, "#34d399", "#f87171", "white")}
                 />
 
                 <Card
                   title="Max Drawdown"
                   value={`${maxDrawdownPct.toFixed(1)}%`}
-                  sub="caída máxima desde pico"
-                  subColor="#fca5a5"
+                  sub="caída máxima desde pico histórico"
+                  subColor="#f87171"
+                  valueColor="#f8fafc"
                 />
               </div>
             </div>
 
-            <div
-              style={{
-                background: "rgba(15,23,42,0.8)",
-                border: "1px solid #1e293b",
-                borderRadius: 28,
-                padding: 20,
-              }}
-            >
+            <div style={SECTION_STYLE}>
               <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Estructura</h2>
 
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
                   gap: 16,
                   marginTop: 20,
+                  alignItems: "stretch",
                 }}
               >
-                <Card
-                  title="CAGR"
-                  value={`${cagr.toFixed(1)}%`}
-                  sub="crecimiento anualizado"
-                  subColor="#22d3ee"
-                />
+                <div
+                  style={{
+                    background: "#0f172a",
+                    border: "1px solid #1e293b",
+                    borderRadius: 24,
+                    padding: 16,
+                  }}
+                >
+                  <div style={{ fontSize: 14, color: "#94a3b8", marginBottom: 14 }}>
+                    CAGR anualizado
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+                      gap: 12,
+                    }}
+                  >
+                    <MiniMetric
+                      title="CAGR Inicio"
+                      value={formatPctOrDash(cagrSinceStart)}
+                      sub="desde 1er snapshot"
+                      accent="#22d3ee"
+                      valueColor={getValueColor(cagrSinceStart, "#34d399", "#f87171", "white")}
+                    />
+                    <MiniMetric
+                      title="CAGR 12M"
+                      value={formatPctOrDash(cagr12m)}
+                      sub="últimos 12 meses"
+                      accent="#34d399"
+                      valueColor={getValueColor(cagr12m, "#34d399", "#f87171", "white")}
+                    />
+                    <MiniMetric
+                      title="CAGR 3A"
+                      value={formatPctOrDash(cagr3y)}
+                      sub="últimos 3 años"
+                      accent="#a78bfa"
+                      valueColor={getValueColor(cagr3y, "#34d399", "#f87171", "white")}
+                    />
+                  </div>
+                </div>
 
                 <Card
                   title="Concentración Top 3"
                   value={`${top3Share.toFixed(1)}%`}
                   sub={visibleRows.slice(0, 3).map((r) => r.asset).join(" + ")}
                   subColor="#fbbf24"
+                  valueColor={top3Share > 60 ? "#fbbf24" : "white"}
                 />
               </div>
             </div>
           </div>
 
-          <div
-            style={{
-              background: "rgba(15,23,42,0.8)",
-              border: "1px solid #1e293b",
-              borderRadius: 28,
-              padding: 20,
-            }}
-          >
+          <div style={SECTION_STYLE}>
             <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Targets y liquidez</h2>
 
             <div
@@ -682,28 +903,22 @@ export default function Page() {
               <Card
                 title="Target Upside"
                 value={formatPct(targetUpside)}
-                sub="vs targets cargados"
-                subColor={targetUpside >= 0 ? "#34d399" : "#fca5a5"}
+                sub="potencial vs targets cargados"
+                subColor={getValueColor(targetUpside, "#34d399", "#f87171", "#94a3b8")}
+                valueColor={getValueColor(targetUpside, "#34d399", "#f87171", "white")}
               />
 
               <Card
                 title="Target Capture Ratio"
                 value={`${targetCapture.toFixed(0)}%`}
-                sub="recorrido capturado hacia targets"
+                sub="recorrido capturado hacia objetivos"
                 subColor="#94a3b8"
               />
             </div>
           </div>
         </div>
 
-        <div
-          style={{
-            background: "rgba(15,23,42,0.8)",
-            border: "1px solid #1e293b",
-            borderRadius: 28,
-            padding: 20,
-          }}
-        >
+        <div style={SECTION_STYLE}>
           <div
             style={{
               display: "flex",
@@ -716,11 +931,11 @@ export default function Page() {
             <div>
               <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Portfolio evolution</h2>
               <p style={{ color: "#94a3b8", marginTop: 8, marginBottom: 0 }}>
-                Historial mensual basado en snapshots manuales. La línea agrega “Actual” como referencia en vivo.
+                Historial mensual basado en snapshots manuales, con el valor actual agregado como referencia en vivo.
               </p>
             </div>
             <div style={{ color: "#94a3b8", fontSize: 14 }}>
-              Snapshots guardados: {history.length}
+              Snapshots guardados: {sortedHistory.length}
             </div>
           </div>
 
@@ -776,14 +991,7 @@ export default function Page() {
             gap: 24,
           }}
         >
-          <div
-            style={{
-              background: "rgba(15,23,42,0.8)",
-              border: "1px solid #1e293b",
-              borderRadius: 28,
-              padding: 20,
-            }}
-          >
+          <div style={SECTION_STYLE}>
             <div
               style={{
                 display: "flex",
@@ -963,31 +1171,17 @@ export default function Page() {
             </div>
           </div>
 
-          <div
-            style={{
-              background: "rgba(15,23,42,0.8)",
-              border: "1px solid #1e293b",
-              borderRadius: 28,
-              padding: 20,
-            }}
-          >
+          <div style={SECTION_STYLE}>
             <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Métricas avanzadas</h2>
 
             <div style={{ display: "grid", gap: 16, marginTop: 20 }}>
-              <div
-                style={{
-                  background: "#020617",
-                  border: "1px solid #1e293b",
-                  borderRadius: 20,
-                  padding: 16,
-                }}
-              >
+              <div style={INNER_CARD_STYLE}>
                 <div style={{ color: "#94a3b8", fontSize: 14 }}>Deployable Liquidity Ratio</div>
                 <div style={{ color: "white", fontSize: 28, fontWeight: 700, marginTop: 8 }}>
                   {deployableLiquidity.toFixed(1)}%
                 </div>
                 <div style={{ color: "#94a3b8", fontSize: 14, marginTop: 8 }}>
-                  Liquidez real para aprovechar caídas.
+                  Liquidez real disponible para aprovechar caídas.
                 </div>
               </div>
 
@@ -1014,10 +1208,7 @@ export default function Page() {
 
         <div
           style={{
-            background: "rgba(15,23,42,0.8)",
-            border: "1px solid #1e293b",
-            borderRadius: 28,
-            padding: 20,
+            ...SECTION_STYLE,
             overflow: "hidden",
           }}
         >
@@ -1069,38 +1260,30 @@ export default function Page() {
                 </tr>
               </thead>
               <tbody>
-                {visibleRows.map((row) => (
-                  <tr
-                    key={row.asset}
-                    style={{
-                      borderBottom: "1px solid rgba(30,41,59,0.75)",
-                    }}
-                  >
-                    <td
+                {visibleRows.map((row) => {
+                  const shareForHeat = portfolioTotal ? (row.displayValue / portfolioTotal) * 100 : 0
+                  const heat = getHeatConfig(shareForHeat)
+
+                  return (
+                    <tr
+                      key={row.asset}
                       style={{
-                        padding: "14px 8px",
-                        color: "white",
-                        fontWeight: 600,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                        borderBottom: "1px solid rgba(30,41,59,0.75)",
                       }}
                     >
-                      {row.asset}
-                    </td>
+                      <td
+                        style={{
+                          padding: "14px 8px",
+                          color: "white",
+                          fontWeight: 600,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {row.asset}
+                      </td>
 
-                    <td
-                      style={{
-                        padding: "14px 8px",
-                        color: "#cbd5e1",
-                        textAlign: "right",
-                        fontVariantNumeric: "tabular-nums",
-                      }}
-                    >
-                      {privacyMode ? "***" : row.quantitySpot}
-                    </td>
-
-                    {showOptions ? (
                       <td
                         style={{
                           padding: "14px 8px",
@@ -1109,96 +1292,110 @@ export default function Page() {
                           fontVariantNumeric: "tabular-nums",
                         }}
                       >
-                        {privacyMode ? "***" : row.optionsShares || "—"}
+                        {privacyMode ? "***" : row.quantitySpot}
                       </td>
-                    ) : null}
 
-                    <td
-                      style={{
-                        padding: "14px 8px",
-                        color: "white",
-                        textAlign: "right",
-                        fontVariantNumeric: "tabular-nums",
-                      }}
-                    >
-                      {privacyMode ? "***" : row.displayQuantity}
-                    </td>
+                      {showOptions ? (
+                        <td
+                          style={{
+                            padding: "14px 8px",
+                            color: "#cbd5e1",
+                            textAlign: "right",
+                            fontVariantNumeric: "tabular-nums",
+                          }}
+                        >
+                          {privacyMode ? "***" : row.optionsShares || "—"}
+                        </td>
+                      ) : null}
 
-                    <td
-                      style={{
-                        padding: "14px 8px",
-                        color: "#cbd5e1",
-                        textAlign: "right",
-                        fontVariantNumeric: "tabular-nums",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {formatMoney(row.price, privacyMode)}
-                    </td>
-
-                    <td
-                      style={{
-                        padding: "14px 8px",
-                        color: "#cbd5e1",
-                        textAlign: "right",
-                        fontVariantNumeric: "tabular-nums",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {formatMoney(row.totalNoOpt, privacyMode)}
-                    </td>
-
-                    {showOptions ? (
                       <td
                         style={{
                           padding: "14px 8px",
-                          color: "#67e8f9",
+                          color: "white",
                           textAlign: "right",
-                          fontWeight: 600,
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        {privacyMode ? "***" : row.displayQuantity}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "14px 8px",
+                          color: "#cbd5e1",
+                          textAlign: "right",
                           fontVariantNumeric: "tabular-nums",
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {formatMoney(row.total, privacyMode)}
+                        {formatMoney(row.price, privacyMode)}
                       </td>
-                    ) : null}
 
-                    <td
-                      style={{
-                        padding: "14px 8px",
-                        color: "white",
-                        textAlign: "right",
-                        fontVariantNumeric: "tabular-nums",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {row.displayShare.toFixed(1)}%
-                    </td>
+                      <td
+                        style={{
+                          padding: "14px 8px",
+                          color: "#cbd5e1",
+                          textAlign: "right",
+                          fontVariantNumeric: "tabular-nums",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {formatMoney(row.totalNoOpt, privacyMode)}
+                      </td>
 
-                    <td
-                      style={{
-                        padding: "14px 8px",
-                        color: "#34d399",
-                        textAlign: "right",
-                        fontVariantNumeric: "tabular-nums",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {showTargets && row.target ? formatMoney(row.target, privacyMode) : "—"}
-                    </td>
+                      {showOptions ? (
+                        <td
+                          style={{
+                            padding: "14px 8px",
+                            color: "#67e8f9",
+                            textAlign: "right",
+                            fontWeight: 600,
+                            fontVariantNumeric: "tabular-nums",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {formatMoney(row.total, privacyMode)}
+                        </td>
+                      ) : null}
 
-                    <td
-                      style={{
-                        padding: "14px 8px",
-                        color: "#94a3b8",
-                        lineHeight: 1.4,
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {row.comment || "—"}
-                    </td>
-                  </tr>
-                ))}
+                      <td
+                        style={{
+                          padding: "14px 8px",
+                          textAlign: "right",
+                          fontVariantNumeric: "tabular-nums",
+                          whiteSpace: "nowrap",
+                          color: heat.text,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {row.displayShare.toFixed(1)}%
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "14px 8px",
+                          color: "#34d399",
+                          textAlign: "right",
+                          fontVariantNumeric: "tabular-nums",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {showTargets && row.target ? formatMoney(row.target, privacyMode) : "—"}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "14px 8px",
+                          color: "#94a3b8",
+                          lineHeight: 1.4,
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {row.comment || "—"}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -1211,14 +1408,7 @@ export default function Page() {
             gap: 24,
           }}
         >
-          <div
-            style={{
-              background: "rgba(15,23,42,0.8)",
-              border: "1px solid #1e293b",
-              borderRadius: 28,
-              padding: 20,
-            }}
-          >
+          <div style={SECTION_STYLE}>
             <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Targets tracker</h2>
             <div style={{ display: "grid", gap: 14, marginTop: 20 }}>
               {visibleRows
@@ -1226,14 +1416,13 @@ export default function Page() {
                 .slice(0, 6)
                 .map((row) => {
                   const progress = Math.min((row.price / (row.target || row.price)) * 100, 100)
+
                   return (
                     <div
                       key={row.asset}
                       style={{
-                        background: "#020617",
-                        border: "1px solid #1e293b",
+                        ...INNER_CARD_STYLE,
                         borderRadius: 20,
-                        padding: 16,
                       }}
                     >
                       <div
@@ -1275,14 +1464,7 @@ export default function Page() {
             </div>
           </div>
 
-          <div
-            style={{
-              background: "rgba(15,23,42,0.8)",
-              border: "1px solid #1e293b",
-              borderRadius: 28,
-              padding: 20,
-            }}
-          >
+          <div style={SECTION_STYLE}>
             <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Heatmap de concentración</h2>
             <p style={{ color: "#94a3b8", marginTop: 8 }}>
               Semáforo: rojo muy expuesto, verde menor exposición.
@@ -1354,17 +1536,12 @@ export default function Page() {
             </div>
           </div>
 
-          <div
-            style={{
-              background: "rgba(15,23,42,0.8)",
-              border: "1px solid #1e293b",
-              borderRadius: 28,
-              padding: 20,
-            }}
-          >
+          <div style={SECTION_STYLE}>
             <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Contribución del mes</h2>
             <p style={{ color: "#94a3b8", marginTop: 8 }}>
-              Cambio por activo vs el cierre de referencia.
+              {comparisonSnapshot
+                ? `Cambio por activo vs ${comparisonSnapshot.label}.`
+                : "Guardá snapshots para ver contribuciones contra un cierre previo."}
             </p>
 
             <div style={{ display: "grid", gap: 12, marginTop: 20 }}>
@@ -1373,10 +1550,8 @@ export default function Page() {
                   <div
                     key={row.asset}
                     style={{
-                      background: "#020617",
-                      border: "1px solid #1e293b",
+                      ...INNER_CARD_STYLE,
                       borderRadius: 18,
-                      padding: 16,
                       display: "flex",
                       justifyContent: "space-between",
                       gap: 12,
@@ -1391,7 +1566,7 @@ export default function Page() {
                     </div>
                     <div
                       style={{
-                        color: row.contribution >= 0 ? "#34d399" : "#fca5a5",
+                        color: row.contribution >= 0 ? "#34d399" : "#f87171",
                         fontWeight: 700,
                       }}
                     >
@@ -1403,10 +1578,8 @@ export default function Page() {
               ) : (
                 <div
                   style={{
-                    background: "#020617",
-                    border: "1px solid #1e293b",
+                    ...INNER_CARD_STYLE,
                     borderRadius: 18,
-                    padding: 16,
                     color: "#94a3b8",
                   }}
                 >
@@ -1417,14 +1590,7 @@ export default function Page() {
           </div>
         </div>
 
-        <div
-          style={{
-            background: "rgba(15,23,42,0.8)",
-            border: "1px solid #1e293b",
-            borderRadius: 28,
-            padding: 20,
-          }}
-        >
+        <div style={SECTION_STYLE}>
           <div
             style={{
               display: "flex",
@@ -1440,7 +1606,7 @@ export default function Page() {
                 Proyección patrimonial si las posiciones con target llegan al objetivo.
               </p>
             </div>
-            <div style={{ color: targetUpside >= 0 ? "#34d399" : "#fca5a5", fontSize: 14 }}>
+            <div style={{ color: getValueColor(targetUpside, "#34d399", "#f87171", "#94a3b8"), fontSize: 14 }}>
               Upside estimado: {formatPct(targetUpside)}
             </div>
           </div>
@@ -1460,6 +1626,7 @@ export default function Page() {
               value={formatMoney(Math.max(targetScenario - portfolioTotal, 0), privacyMode)}
               sub="proyección patrimonial"
               subColor="#34d399"
+              valueColor="#34d399"
             />
           </div>
         </div>
