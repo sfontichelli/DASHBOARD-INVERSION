@@ -816,54 +816,51 @@ if (history.length > 0) {
                           />
                         ))}
                       </Pie>
-                      <Tooltip
-                        content={({ active, payload }: any) => {
-                          if (!active || !payload || !payload.length) return null
+<Tooltip
+  content={({ active, payload }: any) => {
+    if (!active || !payload || !payload.length) return null
 
-                          const item = payload[0]
-                          const name = String(item.name ?? "")
-                          const value = Number(item.value ?? 0)
-                          const share = portfolioTotal ? (value / portfolioTotal) * 100 : 0
+    const item = payload[0]
+    const name = String(item.name ?? "")
+    const value = Number(item.value ?? 0)
+    const share = portfolioTotal ? (value / portfolioTotal) * 100 : 0
 
-                          return (
-                            <div
-                              style={{
-                                background: "#020617",
-                                border: "1px solid #334155",
-                                borderRadius: 12,
-                                padding: "10px 12px",
-                                boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-                                minWidth: 140,
-                              }}
-                            >
-                              <div
-                                style={{
-                                  color: "#22d3ee",
-                                  fontWeight: 700,
-                                  fontSize: 14,
-                                  marginBottom: 6,
-                                }}
-                              >
-                                {name}
-                              </div>
+    return (
+      <div
+        style={{
+          background: "#020617",
+          border: "1px solid #334155",
+          borderRadius: 12,
+          padding: "10px 12px",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+          minWidth: 140,
+        }}
+      >
+        <div
+          style={{
+            color: "#22d3ee",
+            fontWeight: 700,
+            fontSize: 14,
+            marginBottom: 6,
+          }}
+        >
+          {name}
+        </div>
 
-                              <div
-                                style={{
-                                  color: "#e2e8f0",
-                                  fontSize: 13,
-                                  lineHeight: 1.5,
-                                }}
-                              >
-                                <div style={{ color: "#e2e8f0" }}>
-  {formatMoney(value, privacyMode)}
-</div>
-                            </div>
-                          )
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
+        <div
+          style={{
+            color: "#e2e8f0",
+            fontSize: 13,
+            lineHeight: 1.5,
+          }}
+        >
+          <div>{formatMoney(value, privacyMode)}</div>
+          <div>{share.toFixed(1)}% del portfolio</div>
+        </div>
+      </div>
+    )
+  }}
+/>
 
                 <div
                   style={{
