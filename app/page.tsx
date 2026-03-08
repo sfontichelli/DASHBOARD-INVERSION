@@ -559,137 +559,150 @@ export default function Page() {
           </div>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1.4fr 1fr",
-            gap: 20,
-            alignItems: "start",
-          }}
-        >
-          <div
-            style={{
-              background: "rgba(15,23,42,0.8)",
-              border: "1px solid #1e293b",
-              borderRadius: 28,
-              padding: 20,
-            }}
-          >
-            <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Performance</h2>
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "1.4fr 1fr",
+    gap: 20,
+    alignItems: "start",
+  }}
+>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 16,
-                marginTop: 20,
-              }}
-            >
-              <Card
-                title="Portfolio Value"
-                value={formatMoney(portfolioTotal, privacyMode)}
-                sub={showOptions ? "usa TOTAL del mes activo" : "usa TOTAL SIN OP del mes activo"}
-                subColor="#34d399"
-              />
-              <Card
-                title="Variación vs último cierre"
-                value={comparisonSnapshot ? formatMoney(monthlyChange, privacyMode) : "—"}
-                sub={
-                  comparisonSnapshot
-                    ? `${formatPct(monthlyChangePct)} vs ${comparisonSnapshot.label}`
-                    : "todavía no hay snapshots"
-                }
-                subColor={monthlyChange >= 0 ? "#34d399" : "#fca5a5"}
-              />
-              <Card
-                title="YTD Return"
-                value={`${ytdReturn.toFixed(1)}%`}
-                sub="rendimiento del año"
-                subColor="#34d399"
-              />
-              <Card
-                title="Max Drawdown"
-                value={`${maxDrawdownPct.toFixed(1)}%`}
-                sub="caída máxima desde pico"
-                subColor="#fca5a5"
-              />
-            </div>
-          </div>
+  {/* COLUMNA IZQUIERDA */}
+  <div style={{ display: "grid", gap: 20 }}>
 
-          <div style={{ display: "grid", gap: 20 }}>
-            <div
-              style={{
-                background: "rgba(15,23,42,0.8)",
-                border: "1px solid #1e293b",
-                borderRadius: 28,
-                padding: 20,
-              }}
-            >
-              <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Estructura</h2>
+    {/* PERFORMANCE */}
+    <div
+      style={{
+        background: "rgba(15,23,42,0.8)",
+        border: "1px solid #1e293b",
+        borderRadius: 28,
+        padding: 20,
+      }}
+    >
+      <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Performance</h2>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 16,
-                  marginTop: 20,
-                }}
-              >
-                <Card
-                  title="CAGR"
-                  value={`${cagr.toFixed(1)}%`}
-                  sub="crecimiento anualizado"
-                  subColor="#22d3ee"
-                />
-                <Card
-                  title="Concentración Top 3"
-                  value={`${top3Share.toFixed(1)}%`}
-                  sub={visibleRows.slice(0, 3).map((r) => r.asset).join(" + ")}
-                  subColor="#fbbf24"
-                />
-              </div>
-            </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 16,
+          marginTop: 20,
+        }}
+      >
+        <Card
+          title="Portfolio Value"
+          value={formatMoney(portfolioTotal, privacyMode)}
+          sub={showOptions ? "usa TOTAL del mes activo" : "usa TOTAL SIN OP del mes activo"}
+          subColor="#34d399"
+        />
 
-            <div
-              style={{
-                background: "rgba(15,23,42,0.8)",
-                border: "1px solid #1e293b",
-                borderRadius: 28,
-                padding: 20,
-              }}
-            >
-              <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Targets y liquidez</h2>
+        <Card
+          title="Variación vs último cierre"
+          value={comparisonSnapshot ? formatMoney(monthlyChange, privacyMode) : "—"}
+          sub={
+            comparisonSnapshot
+              ? `${formatPct(monthlyChangePct)} vs ${comparisonSnapshot.label}`
+              : "todavía no hay snapshots"
+          }
+          subColor={monthlyChange >= 0 ? "#34d399" : "#fca5a5"}
+        />
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr",
-                  gap: 16,
-                  marginTop: 20,
-                }}
-              >
-                <Card
-                  title="Liquidez"
-                  value={formatMoney(liquidityTotal, privacyMode)}
-                  sub="broker + USDT"
-                  subColor="#34d399"
-                />
-                <Card
-                  title="Target Upside"
-                  value={formatPct(targetUpside)}
-                  sub="vs targets cargados"
-                  subColor={targetUpside >= 0 ? "#34d399" : "#fca5a5"}
-                />
-                <Card
-                  title="Target Capture Ratio"
-                  value={`${targetCapture.toFixed(0)}%`}
-                  sub="recorrido capturado hacia targets"
-                  subColor="#94a3b8"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        <Card
+          title="YTD Return"
+          value={`${ytdReturn.toFixed(1)}%`}
+          sub="rendimiento del año"
+          subColor="#34d399"
+        />
+
+        <Card
+          title="Max Drawdown"
+          value={`${maxDrawdownPct.toFixed(1)}%`}
+          sub="caída máxima desde pico"
+          subColor="#fca5a5"
+        />
+      </div>
+    </div>
+
+    {/* ESTRUCTURA */}
+    <div
+      style={{
+        background: "rgba(15,23,42,0.8)",
+        border: "1px solid #1e293b",
+        borderRadius: 28,
+        padding: 20,
+      }}
+    >
+      <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Estructura</h2>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 16,
+          marginTop: 20,
+        }}
+      >
+        <Card
+          title="CAGR"
+          value={`${cagr.toFixed(1)}%`}
+          sub="crecimiento anualizado"
+          subColor="#22d3ee"
+        />
+
+        <Card
+          title="Concentración Top 3"
+          value={`${top3Share.toFixed(1)}%`}
+          sub={visibleRows.slice(0, 3).map((r) => r.asset).join(" + ")}
+          subColor="#fbbf24"
+        />
+      </div>
+    </div>
+
+  </div>
+
+  {/* COLUMNA DERECHA */}
+  <div
+    style={{
+      background: "rgba(15,23,42,0.8)",
+      border: "1px solid #1e293b",
+      borderRadius: 28,
+      padding: 20,
+    }}
+  >
+    <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Targets y liquidez</h2>
+
+    <div
+      style={{
+        display: "grid",
+        gap: 16,
+        marginTop: 20,
+      }}
+    >
+      <Card
+        title="Liquidez"
+        value={formatMoney(liquidityTotal, privacyMode)}
+        sub="broker + USDT"
+        subColor="#34d399"
+      />
+
+      <Card
+        title="Target Upside"
+        value={formatPct(targetUpside)}
+        sub="vs targets cargados"
+        subColor={targetUpside >= 0 ? "#34d399" : "#fca5a5"}
+      />
+
+      <Card
+        title="Target Capture Ratio"
+        value={`${targetCapture.toFixed(0)}%`}
+        sub="recorrido capturado hacia targets"
+        subColor="#94a3b8"
+      />
+    </div>
+  </div>
+
+</div>
 
         <div
           style={{
