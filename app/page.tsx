@@ -676,10 +676,12 @@ if (history.length > 0) {
               <LineChart data={chartData}>
                 <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
                 <XAxis dataKey="label" stroke="#94a3b8" />
-                <YAxis
-                  stroke="#94a3b8"
-                  tickFormatter={(value) => `$${Math.round(Number(value) / 1000)}k`}
-                />
+                {privacyMode ? null : (
+  <YAxis
+    stroke="#94a3b8"
+    tickFormatter={(value) => `$${Math.round(Number(value) / 1000)}k`}
+  />
+)}
                 <Tooltip
                   content={({ active, payload, label }: any) => {
                     if (!active || !payload || !payload.length) return null
@@ -852,9 +854,9 @@ if (history.length > 0) {
                                   lineHeight: 1.5,
                                 }}
                               >
-                                <div>{formatMoney(value)}</div>
-                                <div>{share.toFixed(1)}% del portfolio</div>
-                              </div>
+                                <div style={{ color: "#e2e8f0" }}>
+  {formatMoney(value, privacyMode)}
+</div>
                             </div>
                           )
                         }}
@@ -1010,13 +1012,13 @@ if (history.length > 0) {
                     <td style={{ padding: "14px 8px", color: "white", fontWeight: 600 }}>{row.asset}</td>
                     <td style={{ padding: "14px 8px", color: "#cbd5e1" }}>{row.category}</td>
                     <td style={{ padding: "14px 8px", color: "#cbd5e1", textAlign: "right" }}>
-                      {row.quantitySpot}
+                      {privacyMode ? "***" : row.quantitySpot}
                     </td>
                     <td style={{ padding: "14px 8px", color: "#cbd5e1", textAlign: "right" }}>
-                      {row.optionsShares || "—"}
+                      {privacyMode ? "***" : row.optionsShares || "—"}
                     </td>
                     <td style={{ padding: "14px 8px", color: "white", textAlign: "right" }}>
-                      {row.displayQuantity}
+                      {privacyMode ? "***" : row.displayQuantity}
                     </td>
                     <td style={{ padding: "14px 8px", color: "#cbd5e1", textAlign: "right" }}>
                       {formatMoney(row.price, privacyMode)}
