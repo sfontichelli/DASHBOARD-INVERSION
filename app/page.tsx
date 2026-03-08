@@ -716,246 +716,247 @@ if (history.length > 0) {
           </div>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "2fr 1fr",
-            gap: 24,
-          }}
-        >
-          <div
-            style={{
-              background: "rgba(15,23,42,0.8)",
-              border: "1px solid #1e293b",
-              borderRadius: 28,
-              padding: 20,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 12,
-                marginBottom: 20,
-                flexWrap: "wrap",
-              }}
-            >
-              <div>
-                <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Composición del portfolio</h2>
-                <p style={{ color: "#94a3b8", marginTop: 8, marginBottom: 0 }}>
-                  Vista por activo o por categoría.
-                </p>
-              </div>
-
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  onClick={() => setAllocationView("asset")}
-                  style={{
-                    padding: "8px 14px",
-                    borderRadius: 999,
-                    border: `1px solid ${allocationView === "asset" ? "#22d3ee" : "#334155"}`,
-                    background: allocationView === "asset" ? "rgba(34,211,238,0.12)" : "#0f172a",
-                    color: allocationView === "asset" ? "#67e8f9" : "#cbd5e1",
-                    cursor: "pointer",
-                  }}
-                >
-                  Por activo
-                </button>
-                <button
-                  onClick={() => setAllocationView("category")}
-                  style={{
-                    padding: "8px 14px",
-                    borderRadius: 999,
-                    border: `1px solid ${allocationView === "category" ? "#22d3ee" : "#334155"}`,
-                    background:
-                      allocationView === "category" ? "rgba(34,211,238,0.12)" : "#0f172a",
-                    color: allocationView === "category" ? "#67e8f9" : "#cbd5e1",
-                    cursor: "pointer",
-                  }}
-                >
-                  Por categoría
-                </button>
-              </div>
-            </div>
-
 <div
   style={{
     display: "grid",
-    gridTemplateColumns: "1.1fr 0.9fr",
-    gap: 20,
-    alignItems: "center",
+    gridTemplateColumns: "2fr 1fr",
+    gap: 24,
   }}
 >
   <div
     style={{
-      minHeight: 320,
-      background: "#020617",
+      background: "rgba(15,23,42,0.8)",
       border: "1px solid #1e293b",
       borderRadius: 28,
-      position: "relative",
-      overflow: "hidden",
+      padding: 20,
     }}
   >
-    <div style={{ width: "100%", height: 320 }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={donutData}
-            dataKey="value"
-            nameKey="name"
-            innerRadius={85}
-            outerRadius={120}
-            paddingAngle={2}
-            stroke="none"
-          >
-            {donutData.map((entry, index) => (
-              <Cell
-                key={`cell-${entry.name}`}
-                fill={CHART_COLORS[index % CHART_COLORS.length]}
-              />
-            ))}
-          </Pie>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 12,
+        marginBottom: 20,
+        flexWrap: "wrap",
+      }}
+    >
+      <div>
+        <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Composición del portfolio</h2>
+        <p style={{ color: "#94a3b8", marginTop: 8, marginBottom: 0 }}>
+          Vista por activo o por categoría.
+        </p>
+      </div>
 
-          <Tooltip
-            content={({ active, payload }: any) => {
-              if (!active || !payload || !payload.length) return null
-
-              const item = payload[0]
-              const name = String(item.name ?? "")
-              const value = Number(item.value ?? 0)
-              const share = portfolioTotal ? (value / portfolioTotal) * 100 : 0
-
-              return (
-                <div
-                  style={{
-                    background: "#020617",
-                    border: "1px solid #334155",
-                    borderRadius: 12,
-                    padding: "10px 12px",
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-                    minWidth: 140,
-                  }}
-                >
-                  <div
-                    style={{
-                      color: "#22d3ee",
-                      fontWeight: 700,
-                      fontSize: 14,
-                      marginBottom: 6,
-                    }}
-                  >
-                    {name}
-                  </div>
-
-                  <div
-                    style={{
-                      color: "#e2e8f0",
-                      fontSize: 13,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    <div>{formatMoney(value, privacyMode)}</div>
-                    <div>{share.toFixed(1)}% del portfolio</div>
-                  </div>
-                </div>
-              )
-            }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          onClick={() => setAllocationView("asset")}
+          style={{
+            padding: "8px 14px",
+            borderRadius: 999,
+            border: `1px solid ${allocationView === "asset" ? "#22d3ee" : "#334155"}`,
+            background: allocationView === "asset" ? "rgba(34,211,238,0.12)" : "#0f172a",
+            color: allocationView === "asset" ? "#67e8f9" : "#cbd5e1",
+            cursor: "pointer",
+          }}
+        >
+          Por activo
+        </button>
+        <button
+          onClick={() => setAllocationView("category")}
+          style={{
+            padding: "8px 14px",
+            borderRadius: 999,
+            border: `1px solid ${allocationView === "category" ? "#22d3ee" : "#334155"}`,
+            background: allocationView === "category" ? "rgba(34,211,238,0.12)" : "#0f172a",
+            color: allocationView === "category" ? "#67e8f9" : "#cbd5e1",
+            cursor: "pointer",
+          }}
+        >
+          Por categoría
+        </button>
+      </div>
     </div>
 
     <div
       style={{
-        position: "absolute",
-        inset: 0,
-        display: "flex",
+        display: "grid",
+        gridTemplateColumns: "1.1fr 0.9fr",
+        gap: 20,
         alignItems: "center",
-        justifyContent: "center",
-        pointerEvents: "none",
       }}
     >
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 14, color: "#94a3b8" }}>Allocation</div>
-        <div style={{ fontSize: 28, color: "white", fontWeight: 700 }}>
-          {allocationView === "asset" ? "Activos" : "Categorías"}
+      <div
+        style={{
+          minHeight: 320,
+          background: "#020617",
+          border: "1px solid #1e293b",
+          borderRadius: 28,
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ width: "100%", height: 320 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={donutData}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={85}
+                outerRadius={120}
+                paddingAngle={2}
+                stroke="none"
+              >
+                {donutData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${entry.name}`}
+                    fill={CHART_COLORS[index % CHART_COLORS.length]}
+                  />
+                ))}
+              </Pie>
+
+              <Tooltip
+                content={({ active, payload }: any) => {
+                  if (!active || !payload || !payload.length) return null
+
+                  const item = payload[0]
+                  const name = String(item.name ?? "")
+                  const value = Number(item.value ?? 0)
+                  const share = portfolioTotal ? (value / portfolioTotal) * 100 : 0
+
+                  return (
+                    <div
+                      style={{
+                        background: "#020617",
+                        border: "1px solid #334155",
+                        borderRadius: 12,
+                        padding: "10px 12px",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+                        minWidth: 140,
+                      }}
+                    >
+                      <div
+                        style={{
+                          color: "#22d3ee",
+                          fontWeight: 700,
+                          fontSize: 14,
+                          marginBottom: 6,
+                        }}
+                      >
+                        {name}
+                      </div>
+
+                      <div
+                        style={{
+                          color: "#e2e8f0",
+                          fontSize: 13,
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        <div>{formatMoney(value, privacyMode)}</div>
+                        <div>{share.toFixed(1)}% del portfolio</div>
+                      </div>
+                    </div>
+                  )
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
+
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+          }}
+        >
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 14, color: "#94a3b8" }}>Allocation</div>
+            <div style={{ fontSize: 28, color: "white", fontWeight: 700 }}>
+              {allocationView === "asset" ? "Activos" : "Categorías"}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gap: 12 }}>
+        {allocation.map((item) => {
+          const share = portfolioTotal ? (item.value / portfolioTotal) * 100 : 0
+          return (
+            <div
+              key={item.name}
+              style={{
+                background: "#020617",
+                border: "1px solid #1e293b",
+                borderRadius: 18,
+                padding: 16,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span style={{ color: "#cbd5e1" }}>{item.name}</span>
+              <span style={{ color: "white", fontWeight: 700 }}>{share.toFixed(1)}%</span>
+            </div>
+          )
+        })}
       </div>
     </div>
   </div>
 
-  <div style={{ display: "grid", gap: 12 }}>
-    {allocation.map((item) => {
-      const share = portfolioTotal ? (item.value / portfolioTotal) * 100 : 0
-      return (
-        <div
-          key={item.name}
-          style={{
-            background: "#020617",
-            border: "1px solid #1e293b",
-            borderRadius: 18,
-            padding: 16,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span style={{ color: "#cbd5e1" }}>{item.name}</span>
-          <span style={{ color: "white", fontWeight: 700 }}>{share.toFixed(1)}%</span>
+  <div
+    style={{
+      background: "rgba(15,23,42,0.8)",
+      border: "1px solid #1e293b",
+      borderRadius: 28,
+      padding: 20,
+    }}
+  >
+    <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Métricas avanzadas</h2>
+
+    <div style={{ display: "grid", gap: 16, marginTop: 20 }}>
+      <div
+        style={{
+          background: "#020617",
+          border: "1px solid #1e293b",
+          borderRadius: 20,
+          padding: 16,
+        }}
+      >
+        <div style={{ color: "#94a3b8", fontSize: 14 }}>Deployable Liquidity Ratio</div>
+        <div style={{ color: "white", fontSize: 28, fontWeight: 700, marginTop: 8 }}>
+          {deployableLiquidity.toFixed(1)}%
         </div>
-      )
-    })}
+        <div style={{ color: "#94a3b8", fontSize: 14, marginTop: 8 }}>
+          Liquidez real para aprovechar caídas.
+        </div>
+      </div>
+
+      <div
+        style={{
+          background: "rgba(245,158,11,0.08)",
+          border: "1px solid rgba(245,158,11,0.22)",
+          borderRadius: 20,
+          padding: 16,
+        }}
+      >
+        <div style={{ color: "#fcd34d", fontSize: 14 }}>Alertas</div>
+        <ul style={{ color: "#cbd5e1", marginTop: 12, paddingLeft: 18, lineHeight: 1.8 }}>
+          {visibleRows[0] ? <li>{visibleRows[0].asset} es la posición más grande.</li> : null}
+          {top3Share > 60 ? <li>Top 3 supera el 60% del portfolio.</li> : null}
+          {deployableLiquidity < 5 ? <li>Liquidez operativa baja.</li> : null}
+          <li>Vista {showOptions ? "con opciones" : "sin opciones"} activa.</li>
+          {privacyMode ? <li>Modo privacidad activo.</li> : null}
+        </ul>
+      </div>
+    </div>
   </div>
 </div>
-
-          <div
-            style={{
-              background: "rgba(15,23,42,0.8)",
-              border: "1px solid #1e293b",
-              borderRadius: 28,
-              padding: 20,
-            }}
-          >
-            <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Métricas avanzadas</h2>
-
-            <div style={{ display: "grid", gap: 16, marginTop: 20 }}>
-              <div
-                style={{
-                  background: "#020617",
-                  border: "1px solid #1e293b",
-                  borderRadius: 20,
-                  padding: 16,
-                }}
-              >
-                <div style={{ color: "#94a3b8", fontSize: 14 }}>Deployable Liquidity Ratio</div>
-                <div style={{ color: "white", fontSize: 28, fontWeight: 700, marginTop: 8 }}>
-                  {deployableLiquidity.toFixed(1)}%
-                </div>
-                <div style={{ color: "#94a3b8", fontSize: 14, marginTop: 8 }}>
-                  Liquidez real para aprovechar caídas.
-                </div>
-              </div>
-
-              <div
-                style={{
-                  background: "rgba(245,158,11,0.08)",
-                  border: "1px solid rgba(245,158,11,0.22)",
-                  borderRadius: 20,
-                  padding: 16,
-                }}
-              >
-                <div style={{ color: "#fcd34d", fontSize: 14 }}>Alertas</div>
-                <ul style={{ color: "#cbd5e1", marginTop: 12, paddingLeft: 18, lineHeight: 1.8 }}>
-                  {visibleRows[0] ? <li>{visibleRows[0].asset} es la posición más grande.</li> : null}
-                  {top3Share > 60 ? <li>Top 3 supera el 60% del portfolio.</li> : null}
-                  {deployableLiquidity < 5 ? <li>Liquidez operativa baja.</li> : null}
-                  <li>Vista {showOptions ? "con opciones" : "sin opciones"} activa.</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
 
         <div
           style={{
