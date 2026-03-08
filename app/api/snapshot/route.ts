@@ -88,6 +88,10 @@ function buildRowValues(
   })
 }
 
+function isValidSnapshotKey(value: string) {
+  return /^\d{4}-\d{2}$/.test(value)
+}
+
 async function upsertSnapshot(params: {
   monthKey: MonthKey
   snapshotKey: string
@@ -211,7 +215,7 @@ export async function GET() {
 
     const monthlyRows = values
       .slice(1)
-      .filter((row) => /^\d{4}-\d{2}$/.test(String(row[keyIndex] || "")))
+      .filter((row) => isValidSnapshotKey(String(row[keyIndex] || "")))
       .sort((a, b) => String(a[keyIndex]).localeCompare(String(b[keyIndex])))
 
     const history = monthlyRows.map((row) => ({
@@ -307,19 +311,33 @@ export async function POST(req: Request) {
     }
 
     const now = new Date()
-    const currentMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`
+    const defaultSnapshotKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`
+    const requestedSnapshotKey =
+      typeof body?.snapshotKey === "string" && isValidSnapshotKey(body.snapshotKey)
+        ? body.snapshotKey
+        : defaultSnapshotKey
+
+    const requestedSnapshotLabel =
+      typeof body?.snapshotLabel === "string" && body.snapshotLabel.trim()
+        ? body.snapshotLabel.trim()
+        : formatSnapshotLabel(now)
+
+    const requestedSnapshotDate =
+      typeof body?.snapshotDate === "string" && !Number.isNaN(new Date(body.snapshotDate).getTime())
+        ? body.snapshotDate
+        : now.toISOString()
 
     const result = await upsertSnapshot({
       monthKey: "actual",
-      snapshotKey: currentMonth,
-      snapshotLabel: formatSnapshotLabel(now),
-      snapshotDate: now.toISOString(),
+      snapshotKey: requestedSnapshotKey,
+      snapshotLabel: requestedSnapshotLabel,
+      snapshotDate: requestedSnapshotDate,
     })
 
     return Response.json({
       ok: true,
       mode: "saveCurrent",
-      snapshotKey: currentMonth,
+      snapshotKey: requestedSnapshotKey,
       ...result,
     })
   } catch (error: any) {
