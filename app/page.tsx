@@ -194,6 +194,16 @@ export default function Page() {
   }, [rows, showLiquidity, showOptions])
 
   const portfolioTotal = visibleRows.reduce((acc, row) => acc + row.displayValue, 0)
+  
+  // YTD Return
+const firstSnapshot = history?.[0]
+
+const ytdReturn =
+  firstSnapshot && firstSnapshot.portfolioTotalWithOptions
+    ? ((portfolioTotal - firstSnapshot.portfolioTotalWithOptions) /
+        firstSnapshot.portfolioTotalWithOptions) *
+      100
+    : 0
 
   const currentTotalWithOpt = rows
     .filter((r) => (showLiquidity ? true : r.category.toUpperCase() !== "LIQUIDEZ"))
