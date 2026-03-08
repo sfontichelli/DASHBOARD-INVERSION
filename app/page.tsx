@@ -708,7 +708,6 @@ if (history.length > 0) {
     </div>
   </div>
 </div>
-        </div>
 
         <div
           style={{
