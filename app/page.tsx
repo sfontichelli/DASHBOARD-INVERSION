@@ -559,6 +559,19 @@ if (history.length > 0) {
             >
               {savingSnapshot ? "Guardando..." : "Guardar cierre mensual"}
             </button>
+            <button
+  onClick={() => setPrivacyMode((v) => !v)}
+  style={{
+    padding: "12px 16px",
+    borderRadius: 16,
+    border: `1px solid ${privacyMode ? "#fbbf24" : "#334155"}`,
+    background: privacyMode ? "rgba(251,191,36,0.15)" : "#0f172a",
+    color: privacyMode ? "#fde68a" : "#cbd5e1",
+    cursor: "pointer",
+  }}
+>
+  Modo privacidad {privacyMode ? "✓" : ""}
+</button>
           </div>
         </div>
 
