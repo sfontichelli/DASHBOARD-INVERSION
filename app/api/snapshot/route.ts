@@ -179,8 +179,7 @@ export async function GET() {
       return Response.json({
         ok: true,
         history: [],
-        latestCompositionWithOptions: {},
-        latestCompositionWithoutOptions: {},
+        compositionsBySnapshot: {},
       })
     }
 
@@ -201,8 +200,7 @@ export async function GET() {
       return Response.json({
         ok: true,
         history: [],
-        latestCompositionWithOptions: {},
-        latestCompositionWithoutOptions: {},
+        compositionsBySnapshot: {},
       })
     }
 
@@ -219,29 +217,41 @@ export async function GET() {
       portfolioTotalWithoutOptions: Number(row[withoutIndex] || 0),
     }))
 
-    const latestRow = monthlyRows.length ? monthlyRows[monthlyRows.length - 1] : null
-    const latestCompositionWithOptions: Record<string, number> = {}
-    const latestCompositionWithoutOptions: Record<string, number> = {}
+    const compositionsBySnapshot: Record<
+      string,
+      {
+        withOptions: Record<string, number>
+        withoutOptions: Record<string, number>
+      }
+    > = {}
 
-    if (latestRow) {
+    monthlyRows.forEach((row) => {
+      const snapshotKey = String(row[keyIndex] || "")
+      const withOptions: Record<string, number> = {}
+      const withoutOptions: Record<string, number> = {}
+
       headers.forEach((header, index) => {
         if (header.endsWith("_with_options") && header !== "portfolio_total_with_options") {
           const asset = header.replace(/_with_options$/, "")
-          latestCompositionWithOptions[asset] = Number(latestRow[index] || 0)
+          withOptions[asset] = Number(row[index] || 0)
         }
 
         if (header.endsWith("_without_options") && header !== "portfolio_total_without_options") {
           const asset = header.replace(/_without_options$/, "")
-          latestCompositionWithoutOptions[asset] = Number(latestRow[index] || 0)
+          withoutOptions[asset] = Number(row[index] || 0)
         }
       })
-    }
+
+      compositionsBySnapshot[snapshotKey] = {
+        withOptions,
+        withoutOptions,
+      }
+    })
 
     return Response.json({
       ok: true,
       history,
-      latestCompositionWithOptions,
-      latestCompositionWithoutOptions,
+      compositionsBySnapshot,
     })
   } catch (error: any) {
     return Response.json(
