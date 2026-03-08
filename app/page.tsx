@@ -779,134 +779,135 @@ if (history.length > 0) {
               </div>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.1fr 0.9fr",
-                gap: 20,
-                alignItems: "center",
-              }}
-            >
-              <div
-                style={{
-                  minHeight: 320,
-                  background: "#020617",
-                  border: "1px solid #1e293b",
-                  borderRadius: 28,
-                  position: "relative",
-                  overflow: "hidden",
-                }}
-              >
-                <div style={{ width: "100%", height: 320 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-  <Pie
-    data={donutData}
-    dataKey="value"
-    nameKey="name"
-    innerRadius={85}
-    outerRadius={120}
-    paddingAngle={2}
-    stroke="none"
-  >
-    {donutData.map((entry, index) => (
-      <Cell
-        key={`cell-${entry.name}`}
-        fill={CHART_COLORS[index % CHART_COLORS.length]}
-      />
-    ))}
-  </Pie>
-
-  <Tooltip
-    content={({ active, payload }: any) => {
-      if (!active || !payload || !payload.length) return null
-
-      const item = payload[0]
-      const name = String(item.name ?? "")
-      const value = Number(item.value ?? 0)
-      const share = portfolioTotal ? (value / portfolioTotal) * 100 : 0
-
-      return (
-        <div
-          style={{
-            background: "#020617",
-            border: "1px solid #334155",
-            borderRadius: 12,
-            padding: "10px 12px",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-            minWidth: 140,
-          }}
-        >
-          <div
-            style={{
-              color: "#22d3ee",
-              fontWeight: 700,
-              fontSize: 14,
-              marginBottom: 6,
-            }}
-          >
-            {name}
-          </div>
-
-          <div
-            style={{
-              color: "#e2e8f0",
-              fontSize: 13,
-              lineHeight: 1.5,
-            }}
-          >
-            <div>{formatMoney(value, privacyMode)}</div>
-            <div>{share.toFixed(1)}% del portfolio</div>
-          </div>
-        </div>
-      )
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "1.1fr 0.9fr",
+    gap: 20,
+    alignItems: "center",
+  }}
+>
+  <div
+    style={{
+      minHeight: 320,
+      background: "#020617",
+      border: "1px solid #1e293b",
+      borderRadius: 28,
+      position: "relative",
+      overflow: "hidden",
     }}
-  />
-</PieChart>
+  >
+    <div style={{ width: "100%", height: 320 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={donutData}
+            dataKey="value"
+            nameKey="name"
+            innerRadius={85}
+            outerRadius={120}
+            paddingAngle={2}
+            stroke="none"
+          >
+            {donutData.map((entry, index) => (
+              <Cell
+                key={`cell-${entry.name}`}
+                fill={CHART_COLORS[index % CHART_COLORS.length]}
+              />
+            ))}
+          </Pie>
 
+          <Tooltip
+            content={({ active, payload }: any) => {
+              if (!active || !payload || !payload.length) return null
+
+              const item = payload[0]
+              const name = String(item.name ?? "")
+              const value = Number(item.value ?? 0)
+              const share = portfolioTotal ? (value / portfolioTotal) * 100 : 0
+
+              return (
                 <div
                   style={{
-                    position: "absolute",
-                    inset: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    pointerEvents: "none",
+                    background: "#020617",
+                    border: "1px solid #334155",
+                    borderRadius: 12,
+                    padding: "10px 12px",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+                    minWidth: 140,
                   }}
                 >
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 14, color: "#94a3b8" }}>Allocation</div>
-                    <div style={{ fontSize: 28, color: "white", fontWeight: 700 }}>
-                      {allocationView === "asset" ? "Activos" : "Categorías"}
-                    </div>
+                  <div
+                    style={{
+                      color: "#22d3ee",
+                      fontWeight: 700,
+                      fontSize: 14,
+                      marginBottom: 6,
+                    }}
+                  >
+                    {name}
+                  </div>
+
+                  <div
+                    style={{
+                      color: "#e2e8f0",
+                      fontSize: 13,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    <div>{formatMoney(value, privacyMode)}</div>
+                    <div>{share.toFixed(1)}% del portfolio</div>
                   </div>
                 </div>
-              </div>
+              )
+            }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
 
-              <div style={{ display: "grid", gap: 12 }}>
-                {allocation.map((item) => {
-                  const share = portfolioTotal ? (item.value / portfolioTotal) * 100 : 0
-                  return (
-                    <div
-                      key={item.name}
-                      style={{
-                        background: "#020617",
-                        border: "1px solid #1e293b",
-                        borderRadius: 18,
-                        padding: 16,
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <span style={{ color: "#cbd5e1" }}>{item.name}</span>
-                      <span style={{ color: "white", fontWeight: 700 }}>{share.toFixed(1)}%</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        pointerEvents: "none",
+      }}
+    >
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 14, color: "#94a3b8" }}>Allocation</div>
+        <div style={{ fontSize: 28, color: "white", fontWeight: 700 }}>
+          {allocationView === "asset" ? "Activos" : "Categorías"}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style={{ display: "grid", gap: 12 }}>
+    {allocation.map((item) => {
+      const share = portfolioTotal ? (item.value / portfolioTotal) * 100 : 0
+      return (
+        <div
+          key={item.name}
+          style={{
+            background: "#020617",
+            border: "1px solid #1e293b",
+            borderRadius: 18,
+            padding: 16,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span style={{ color: "#cbd5e1" }}>{item.name}</span>
+          <span style={{ color: "white", fontWeight: 700 }}>{share.toFixed(1)}%</span>
+        </div>
+      )
+    })}
+  </div>
+</div>
 
           <div
             style={{
