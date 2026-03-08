@@ -323,19 +323,13 @@ const ytdReturn =
     comparisonSnapshot && comparisonSnapshotValue
       ? (monthlyChange / comparisonSnapshotValue) * 100
       : 0
-
-  const chartData = useMemo(() => {
-    const base = history.map((point) => ({
-      label: point.label,
-      portfolioTotal: showOptions
-        ? point.portfolioTotalWithOptions
-        : point.portfolioTotalWithoutOptions,
-    }))
 // =============================
 // Portfolio Risk Metrics
 // =============================
 
-const portfolioSeries = chartData.map((p) => p.portfolioTotal)
+const portfolioSeries = history.map((h) =>
+  showOptions ? h.portfolioTotalWithOptions : h.portfolioTotalWithoutOptions
+)
 
 let peak = -Infinity
 let maxDrawdown = 0
@@ -347,6 +341,28 @@ for (const v of portfolioSeries) {
 }
 
 const maxDrawdownPct = maxDrawdown * 100
+
+// CAGR
+let cagr = 0
+
+if (history.length > 0) {
+  const first = showOptions
+    ? history[0].portfolioTotalWithOptions
+    : history[0].portfolioTotalWithoutOptions
+
+  const years = history.length / 12
+
+  if (first && years > 0) {
+    cagr = (Math.pow(portfolioTotal / first, 1 / years) - 1) * 100
+  }
+}
+  const chartData = useMemo(() => {
+    const base = history.map((point) => ({
+      label: point.label,
+      portfolioTotal: showOptions
+        ? point.portfolioTotalWithOptions
+        : point.portfolioTotalWithoutOptions,
+    }))
 
 // CAGR
 let cagr = 0
