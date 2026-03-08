@@ -1,7 +1,5 @@
 import { google } from "googleapis"
-import { mapPortfolioRows, type PortfolioRow } from "../../../lib/portfolio-mapper"
-
-type MonthKey = "enero" | "febrero" | "marzo"
+import { mapPortfolioRows, type PortfolioRow, type MonthKey } from "../../../lib/portfolio-mapper"
 
 function getSheetsClient() {
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
@@ -26,12 +24,19 @@ function getSheetsClient() {
 function toColumnLetter(columnNumber: number) {
   let temp = columnNumber
   let letter = ""
+
   while (temp > 0) {
     const mod = (temp - 1) % 26
     letter = String.fromCharCode(65 + mod) + letter
     temp = Math.floor((temp - mod) / 26)
   }
+
   return letter
+}
+
+function formatSnapshotLabel(date: Date) {
+  const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+  return `${monthNames[date.getUTCMonth()]} ${date.getUTCFullYear()}`
 }
 
 function buildHeaders(rows: PortfolioRow[]) {
@@ -283,12 +288,6 @@ export async function POST(req: Request) {
           snapshotLabel: "Feb 2026",
           snapshotDate: "2026-02-28T23:59:59.000Z",
         },
-        {
-          monthKey: "marzo" as MonthKey,
-          snapshotKey: "2026-03",
-          snapshotLabel: "Mar 2026",
-          snapshotDate: "2026-03-31T23:59:59.000Z",
-        },
       ]
 
       const results = []
@@ -311,12 +310,9 @@ export async function POST(req: Request) {
     const currentMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`
 
     const result = await upsertSnapshot({
-      monthKey: "marzo",
+      monthKey: "actual",
       snapshotKey: currentMonth,
-      snapshotLabel: now.toLocaleDateString("es-AR", {
-        month: "short",
-        year: "numeric",
-      }),
+      snapshotLabel: formatSnapshotLabel(now),
       snapshotDate: now.toISOString(),
     })
 
