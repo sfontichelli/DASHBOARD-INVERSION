@@ -17,6 +17,9 @@ function parseNumber(value: unknown): number {
 }
 
 function parseNullableNumber(value: unknown): number | null {
+  const raw = String(value ?? "").trim()
+  if (!raw) return null
+
   const n = parseNumber(value)
   return n === 0 ? null : n
 }
@@ -36,7 +39,7 @@ export type PortfolioRow = {
   comment: string
 }
 
-type MonthKey = "enero" | "febrero" | "marzo"
+export type MonthKey = "enero" | "febrero" | "actual"
 
 type MonthConfig = {
   quantity: number
@@ -73,7 +76,7 @@ const MONTH_CONFIG: Record<MonthKey, MonthConfig> = {
     target: null,
     comment: null,
   },
-  marzo: {
+  actual: {
     quantity: 14,      // O
     options: 15,       // P
     price: 16,         // Q
@@ -146,6 +149,6 @@ export function mapPortfolioRows(values: string[][], monthKey: MonthKey): Portfo
     })
 }
 
-export function mapMarchRows(values: string[][]): PortfolioRow[] {
-  return mapPortfolioRows(values, "marzo")
+export function mapActualRows(values: string[][]): PortfolioRow[] {
+  return mapPortfolioRows(values, "actual")
 }
