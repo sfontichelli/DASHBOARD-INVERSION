@@ -559,150 +559,142 @@ export default function Page() {
           </div>
         </div>
 
-<div
-  style={{
-    display: "grid",
-    gridTemplateColumns: "1.4fr 1fr",
-    gap: 20,
-    alignItems: "start",
-  }}
->
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1.4fr 1fr",
+            gap: 20,
+            alignItems: "start",
+          }}
+        >
+          <div style={{ display: "grid", gap: 20 }}>
+            <div
+              style={{
+                background: "rgba(15,23,42,0.8)",
+                border: "1px solid #1e293b",
+                borderRadius: 28,
+                padding: 20,
+              }}
+            >
+              <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Performance</h2>
 
-  {/* COLUMNA IZQUIERDA */}
-  <div style={{ display: "grid", gap: 20 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 16,
+                  marginTop: 20,
+                }}
+              >
+                <Card
+                  title="Portfolio Value"
+                  value={formatMoney(portfolioTotal, privacyMode)}
+                  sub={showOptions ? "usa TOTAL del mes activo" : "usa TOTAL SIN OP del mes activo"}
+                  subColor="#34d399"
+                />
 
-    {/* PERFORMANCE */}
-    <div
-      style={{
-        background: "rgba(15,23,42,0.8)",
-        border: "1px solid #1e293b",
-        borderRadius: 28,
-        padding: 20,
-      }}
-    >
-      <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Performance</h2>
+                <Card
+                  title="Variación vs último cierre"
+                  value={comparisonSnapshot ? formatMoney(monthlyChange, privacyMode) : "—"}
+                  sub={
+                    comparisonSnapshot
+                      ? `${formatPct(monthlyChangePct)} vs ${comparisonSnapshot.label}`
+                      : "todavía no hay snapshots"
+                  }
+                  subColor={monthlyChange >= 0 ? "#34d399" : "#fca5a5"}
+                />
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 16,
-          marginTop: 20,
-        }}
-      >
-        <Card
-          title="Portfolio Value"
-          value={formatMoney(portfolioTotal, privacyMode)}
-          sub={showOptions ? "usa TOTAL del mes activo" : "usa TOTAL SIN OP del mes activo"}
-          subColor="#34d399"
-        />
+                <Card
+                  title="YTD Return"
+                  value={`${ytdReturn.toFixed(1)}%`}
+                  sub="rendimiento del año"
+                  subColor="#34d399"
+                />
 
-        <Card
-          title="Variación vs último cierre"
-          value={comparisonSnapshot ? formatMoney(monthlyChange, privacyMode) : "—"}
-          sub={
-            comparisonSnapshot
-              ? `${formatPct(monthlyChangePct)} vs ${comparisonSnapshot.label}`
-              : "todavía no hay snapshots"
-          }
-          subColor={monthlyChange >= 0 ? "#34d399" : "#fca5a5"}
-        />
+                <Card
+                  title="Max Drawdown"
+                  value={`${maxDrawdownPct.toFixed(1)}%`}
+                  sub="caída máxima desde pico"
+                  subColor="#fca5a5"
+                />
+              </div>
+            </div>
 
-        <Card
-          title="YTD Return"
-          value={`${ytdReturn.toFixed(1)}%`}
-          sub="rendimiento del año"
-          subColor="#34d399"
-        />
+            <div
+              style={{
+                background: "rgba(15,23,42,0.8)",
+                border: "1px solid #1e293b",
+                borderRadius: 28,
+                padding: 20,
+              }}
+            >
+              <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Estructura</h2>
 
-        <Card
-          title="Max Drawdown"
-          value={`${maxDrawdownPct.toFixed(1)}%`}
-          sub="caída máxima desde pico"
-          subColor="#fca5a5"
-        />
-      </div>
-    </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 16,
+                  marginTop: 20,
+                }}
+              >
+                <Card
+                  title="CAGR"
+                  value={`${cagr.toFixed(1)}%`}
+                  sub="crecimiento anualizado"
+                  subColor="#22d3ee"
+                />
 
-    {/* ESTRUCTURA */}
-    <div
-      style={{
-        background: "rgba(15,23,42,0.8)",
-        border: "1px solid #1e293b",
-        borderRadius: 28,
-        padding: 20,
-      }}
-    >
-      <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Estructura</h2>
+                <Card
+                  title="Concentración Top 3"
+                  value={`${top3Share.toFixed(1)}%`}
+                  sub={visibleRows.slice(0, 3).map((r) => r.asset).join(" + ")}
+                  subColor="#fbbf24"
+                />
+              </div>
+            </div>
+          </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 16,
-          marginTop: 20,
-        }}
-      >
-        <Card
-          title="CAGR"
-          value={`${cagr.toFixed(1)}%`}
-          sub="crecimiento anualizado"
-          subColor="#22d3ee"
-        />
+          <div
+            style={{
+              background: "rgba(15,23,42,0.8)",
+              border: "1px solid #1e293b",
+              borderRadius: 28,
+              padding: 20,
+            }}
+          >
+            <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Targets y liquidez</h2>
 
-        <Card
-          title="Concentración Top 3"
-          value={`${top3Share.toFixed(1)}%`}
-          sub={visibleRows.slice(0, 3).map((r) => r.asset).join(" + ")}
-          subColor="#fbbf24"
-        />
-      </div>
-    </div>
+            <div
+              style={{
+                display: "grid",
+                gap: 16,
+                marginTop: 20,
+              }}
+            >
+              <Card
+                title="Liquidez"
+                value={formatMoney(liquidityTotal, privacyMode)}
+                sub="broker + USDT"
+                subColor="#34d399"
+              />
 
-  </div>
+              <Card
+                title="Target Upside"
+                value={formatPct(targetUpside)}
+                sub="vs targets cargados"
+                subColor={targetUpside >= 0 ? "#34d399" : "#fca5a5"}
+              />
 
-  {/* COLUMNA DERECHA */}
-  <div
-    style={{
-      background: "rgba(15,23,42,0.8)",
-      border: "1px solid #1e293b",
-      borderRadius: 28,
-      padding: 20,
-    }}
-  >
-    <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Targets y liquidez</h2>
-
-    <div
-      style={{
-        display: "grid",
-        gap: 16,
-        marginTop: 20,
-      }}
-    >
-      <Card
-        title="Liquidez"
-        value={formatMoney(liquidityTotal, privacyMode)}
-        sub="broker + USDT"
-        subColor="#34d399"
-      />
-
-      <Card
-        title="Target Upside"
-        value={formatPct(targetUpside)}
-        sub="vs targets cargados"
-        subColor={targetUpside >= 0 ? "#34d399" : "#fca5a5"}
-      />
-
-      <Card
-        title="Target Capture Ratio"
-        value={`${targetCapture.toFixed(0)}%`}
-        sub="recorrido capturado hacia targets"
-        subColor="#94a3b8"
-      />
-    </div>
-  </div>
-
-</div>
+              <Card
+                title="Target Capture Ratio"
+                value={`${targetCapture.toFixed(0)}%`}
+                sub="recorrido capturado hacia targets"
+                subColor="#94a3b8"
+              />
+            </div>
+          </div>
+        </div>
 
         <div
           style={{
@@ -1041,27 +1033,39 @@ export default function Page() {
             <div>
               <h2 style={{ margin: 0, color: "white", fontSize: 22 }}>Tabla de posiciones</h2>
               <p style={{ color: "#94a3b8", marginTop: 8, marginBottom: 0 }}>
-                Cantidad muestra spot o spot + opciones según el toggle.
+                {showOptions
+                  ? "Vista completa con exposición spot y opciones."
+                  : "Vista simplificada solo con exposición spot."}
               </p>
             </div>
             <div style={{ color: "#94a3b8", fontSize: 14 }}>Ordenado por peso en portfolio</div>
           </div>
 
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", minWidth: 1200, borderCollapse: "collapse" }}>
+            <table
+              style={{
+                width: "100%",
+                minWidth: showOptions ? 1180 : 920,
+                borderCollapse: "collapse",
+                tableLayout: "fixed",
+              }}
+            >
               <thead>
                 <tr style={{ color: "#94a3b8", borderBottom: "1px solid #1e293b", textAlign: "left" }}>
-                  <th style={{ padding: "12px 8px" }}>Activo</th>
-                  <th style={{ padding: "12px 8px" }}>Categoría</th>
-                  <th style={{ padding: "12px 8px", textAlign: "right" }}>Spot</th>
-                  <th style={{ padding: "12px 8px", textAlign: "right" }}>Opciones</th>
-                  <th style={{ padding: "12px 8px", textAlign: "right" }}>Cantidad</th>
-                  <th style={{ padding: "12px 8px", textAlign: "right" }}>Precio</th>
-                  <th style={{ padding: "12px 8px", textAlign: "right" }}>Valor s/opc.</th>
-                  <th style={{ padding: "12px 8px", textAlign: "right" }}>Valor c/opc.</th>
-                  <th style={{ padding: "12px 8px", textAlign: "right" }}>Share</th>
-                  <th style={{ padding: "12px 8px", textAlign: "right" }}>Target</th>
-                  <th style={{ padding: "12px 8px" }}>Comentario</th>
+                  <th style={{ padding: "12px 8px", width: showOptions ? "14%" : "16%" }}>Activo</th>
+                  <th style={{ padding: "12px 8px", textAlign: "right", width: "10%" }}>Spot</th>
+                  {showOptions ? (
+                    <th style={{ padding: "12px 8px", textAlign: "right", width: "10%" }}>Opciones</th>
+                  ) : null}
+                  <th style={{ padding: "12px 8px", textAlign: "right", width: "10%" }}>Cantidad</th>
+                  <th style={{ padding: "12px 8px", textAlign: "right", width: "11%" }}>Precio</th>
+                  <th style={{ padding: "12px 8px", textAlign: "right", width: "12%" }}>Valor s/opc.</th>
+                  {showOptions ? (
+                    <th style={{ padding: "12px 8px", textAlign: "right", width: "12%" }}>Valor c/opc.</th>
+                  ) : null}
+                  <th style={{ padding: "12px 8px", textAlign: "right", width: "8%" }}>Share</th>
+                  <th style={{ padding: "12px 8px", textAlign: "right", width: "11%" }}>Target</th>
+                  <th style={{ padding: "12px 8px", width: showOptions ? "12%" : "23%" }}>Comentario</th>
                 </tr>
               </thead>
               <tbody>
@@ -1072,33 +1076,125 @@ export default function Page() {
                       borderBottom: "1px solid rgba(30,41,59,0.75)",
                     }}
                   >
-                    <td style={{ padding: "14px 8px", color: "white", fontWeight: 600 }}>{row.asset}</td>
-                    <td style={{ padding: "14px 8px", color: "#cbd5e1" }}>{row.category}</td>
-                    <td style={{ padding: "14px 8px", color: "#cbd5e1", textAlign: "right" }}>
+                    <td
+                      style={{
+                        padding: "14px 8px",
+                        color: "white",
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {row.asset}
+                    </td>
+
+                    <td
+                      style={{
+                        padding: "14px 8px",
+                        color: "#cbd5e1",
+                        textAlign: "right",
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
                       {privacyMode ? "***" : row.quantitySpot}
                     </td>
-                    <td style={{ padding: "14px 8px", color: "#cbd5e1", textAlign: "right" }}>
-                      {privacyMode ? "***" : row.optionsShares || "—"}
-                    </td>
-                    <td style={{ padding: "14px 8px", color: "white", textAlign: "right" }}>
+
+                    {showOptions ? (
+                      <td
+                        style={{
+                          padding: "14px 8px",
+                          color: "#cbd5e1",
+                          textAlign: "right",
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        {privacyMode ? "***" : row.optionsShares || "—"}
+                      </td>
+                    ) : null}
+
+                    <td
+                      style={{
+                        padding: "14px 8px",
+                        color: "white",
+                        textAlign: "right",
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
                       {privacyMode ? "***" : row.displayQuantity}
                     </td>
-                    <td style={{ padding: "14px 8px", color: "#cbd5e1", textAlign: "right" }}>
+
+                    <td
+                      style={{
+                        padding: "14px 8px",
+                        color: "#cbd5e1",
+                        textAlign: "right",
+                        fontVariantNumeric: "tabular-nums",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {formatMoney(row.price, privacyMode)}
                     </td>
-                    <td style={{ padding: "14px 8px", color: "#cbd5e1", textAlign: "right" }}>
+
+                    <td
+                      style={{
+                        padding: "14px 8px",
+                        color: "#cbd5e1",
+                        textAlign: "right",
+                        fontVariantNumeric: "tabular-nums",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {formatMoney(row.totalNoOpt, privacyMode)}
                     </td>
-                    <td style={{ padding: "14px 8px", color: "#67e8f9", textAlign: "right", fontWeight: 600 }}>
-                      {formatMoney(row.total, privacyMode)}
-                    </td>
-                    <td style={{ padding: "14px 8px", color: "white", textAlign: "right" }}>
+
+                    {showOptions ? (
+                      <td
+                        style={{
+                          padding: "14px 8px",
+                          color: "#67e8f9",
+                          textAlign: "right",
+                          fontWeight: 600,
+                          fontVariantNumeric: "tabular-nums",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {formatMoney(row.total, privacyMode)}
+                      </td>
+                    ) : null}
+
+                    <td
+                      style={{
+                        padding: "14px 8px",
+                        color: "white",
+                        textAlign: "right",
+                        fontVariantNumeric: "tabular-nums",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {row.displayShare.toFixed(1)}%
                     </td>
-                    <td style={{ padding: "14px 8px", color: "#34d399", textAlign: "right" }}>
+
+                    <td
+                      style={{
+                        padding: "14px 8px",
+                        color: "#34d399",
+                        textAlign: "right",
+                        fontVariantNumeric: "tabular-nums",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {showTargets && row.target ? formatMoney(row.target, privacyMode) : "—"}
                     </td>
-                    <td style={{ padding: "14px 8px", color: "#94a3b8" }}>
+
+                    <td
+                      style={{
+                        padding: "14px 8px",
+                        color: "#94a3b8",
+                        lineHeight: 1.4,
+                        wordBreak: "break-word",
+                      }}
+                    >
                       {row.comment || "—"}
                     </td>
                   </tr>
