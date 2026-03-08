@@ -51,7 +51,8 @@ type SnapshotCompositionMap = Record<
   }
 >
 
-function formatMoney(value: number) {
+function formatMoney(value: number, privacyMode?: boolean) {
+  if (privacyMode) return "$*****"
   return `$${Math.round(value).toLocaleString("es-AR")}`
 }
 
@@ -160,6 +161,7 @@ export default function Page() {
   const [showOptions, setShowOptions] = useState(true)
   const [showTargets, setShowTargets] = useState(true)
   const [showLiquidity, setShowLiquidity] = useState(true)
+  const [privacyMode, setPrivacyMode] = useState(false)
   const [allocationView, setAllocationView] = useState<"asset" | "category">("asset")
 
   async function loadData() {
@@ -569,7 +571,7 @@ if (history.length > 0) {
         >
           <Card
             title="Portfolio Value"
-            value={formatMoney(portfolioTotal)}
+            value={formatMoney(portfolioTotal, privacyMode)}
             sub={showOptions ? "usa TOTAL del mes activo" : "usa TOTAL SIN OP del mes activo"}
             subColor="#34d399"
           />
@@ -581,7 +583,7 @@ if (history.length > 0) {
 />
           <Card
             title="Variación vs último cierre"
-            value={comparisonSnapshot ? formatMoney(monthlyChange) : "—"}
+            value={comparisonSnapshot ? formatMoney(monthlyChange, privacyMode) : "—"}
             sub={
               comparisonSnapshot
                 ? `${formatPct(monthlyChangePct)} vs ${comparisonSnapshot.label}`
@@ -597,7 +599,7 @@ if (history.length > 0) {
           />
           <Card
             title="Liquidez"
-            value={formatMoney(liquidityTotal)}
+            value={formatMoney(liquidityTotal, privacyMode)}
             sub="broker + USDT"
             subColor="#34d399"
           />
@@ -1004,13 +1006,13 @@ if (history.length > 0) {
                       {row.displayQuantity}
                     </td>
                     <td style={{ padding: "14px 8px", color: "#cbd5e1", textAlign: "right" }}>
-                      {formatMoney(row.price)}
+                      {formatMoney(row.price, privacyMode)}
                     </td>
                     <td style={{ padding: "14px 8px", color: "#cbd5e1", textAlign: "right" }}>
-                      {formatMoney(row.totalNoOpt)}
+                      {formatMoney(row.totalNoOpt, privacyMode)}
                     </td>
                     <td style={{ padding: "14px 8px", color: "#67e8f9", textAlign: "right", fontWeight: 600 }}>
-                      {formatMoney(row.total)}
+                      {formatMoney(row.total, privacyMode)}
                     </td>
                     <td style={{ padding: "14px 8px", color: "white", textAlign: "right" }}>
                       {row.displayShare.toFixed(1)}%
@@ -1210,7 +1212,7 @@ if (history.length > 0) {
                     <div>
                       <div style={{ color: "white", fontWeight: 600 }}>{row.asset}</div>
                       <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>
-                        {formatMoney(row.previous)} → {formatMoney(row.current)}
+                        {formatMoney(row.previous, privacyMode)} → {formatMoney(row.current, privacyMode)}
                       </div>
                     </div>
                     <div
@@ -1220,7 +1222,7 @@ if (history.length > 0) {
                       }}
                     >
                       {row.contribution >= 0 ? "+" : "-"}
-                      {formatMoney(Math.abs(row.contribution))}
+                      {formatMoney(Math.abs(row.contribution), privacyMode)}
                     </div>
                   </div>
                 ))
@@ -1281,7 +1283,7 @@ if (history.length > 0) {
             <Card title="Valor a targets" value={formatMoney(targetScenario)} />
             <Card
               title="Potencial incremental"
-              value={formatMoney(Math.max(targetScenario - portfolioTotal, 0))}
+              value={formatMoney(Math.max(targetScenario - portfolioTotal, 0), privacyMode)}
               sub="proyección patrimonial"
               subColor="#34d399"
             />
