@@ -57,6 +57,13 @@ type PerformancePoint = {
   label: string
 }
 
+type SnapshotSaveChoice = {
+  snapshotKey: string
+  snapshotLabel: string
+  snapshotDate: string
+  description: string
+}
+
 const SECTION_STYLE: CSSProperties = {
   background: "rgba(15,23,42,0.8)",
   border: "1px solid #1e293b",
@@ -195,6 +202,31 @@ function getHeatConfig(share: number) {
   }
 }
 
+function formatSnapshotMonthLabel(date: Date) {
+  const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+  return `${monthNames[date.getUTCMonth()]} ${date.getUTCFullYear()}`
+}
+
+function getMonthKey(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`
+}
+
+function getMonthEndIso(date: Date) {
+  const year = date.getUTCFullYear()
+  const month = date.getUTCMonth()
+  const monthEnd = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 0))
+  return monthEnd.toISOString()
+}
+
+function buildSnapshotChoice(date: Date, description: string): SnapshotSaveChoice {
+  return {
+    snapshotKey: getMonthKey(date),
+    snapshotLabel: formatSnapshotMonthLabel(date),
+    snapshotDate: getMonthEndIso(date),
+    description,
+  }
+}
+
 const CHART_COLORS = [
   "#22d3ee",
   "#ef4444",
@@ -292,6 +324,7 @@ export default function Page() {
   const [compositionsBySnapshot, setCompositionsBySnapshot] = useState<SnapshotCompositionMap>({})
   const [loading, setLoading] = useState(true)
   const [savingSnapshot, setSavingSnapshot] = useState(false)
+  const [saveModalOpen, setSaveModalOpen] = useState(false)
   const [showOptions, setShowOptions] = useState(true)
   const [showTargets, setShowTargets] = useState(true)
   const [showLiquidity, setShowLiquidity] = useState(true)
@@ -600,14 +633,42 @@ export default function Page() {
       .slice(0, 8)
   }, [rows, comparisonComposition, showOptions])
 
-  async function handleSaveSnapshot() {
+  const snapshotSaveChoices = useMemo(() => {
+    const now = new Date()
+    const currentMonthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    const previousMonthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1))
+    const earlyMonth = now.getUTCDate() <= 7
+
+    const recommended = earlyMonth
+      ? buildSnapshotChoice(previousMonthDate, "Recomendado si todavía estás cerrando el mes anterior.")
+      : buildSnapshotChoice(currentMonthDate, "Recomendado para guardar el cierre del mes en curso.")
+
+    const alternate = earlyMonth
+      ? buildSnapshotChoice(currentMonthDate, "Usalo solo si querés registrar el mes actual.")
+      : buildSnapshotChoice(previousMonthDate, "Útil si todavía necesitás corregir o rehacer el cierre anterior.")
+
+    return {
+      recommended,
+      alternate,
+      todayLabel: now.toLocaleDateString("es-AR"),
+    }
+  }, [])
+
+  async function handleSaveSnapshot(choice: SnapshotSaveChoice) {
     try {
       setSavingSnapshot(true)
+
       const res = await fetch("/api/snapshot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "saveCurrent" }),
+        body: JSON.stringify({
+          mode: "saveCurrent",
+          snapshotKey: choice.snapshotKey,
+          snapshotLabel: choice.snapshotLabel,
+          snapshotDate: choice.snapshotDate,
+        }),
       })
+
       const data = await res.json()
 
       if (!res.ok) {
@@ -616,7 +677,8 @@ export default function Page() {
       }
 
       await loadData()
-      alert("Cierre mensual guardado correctamente")
+      setSaveModalOpen(false)
+      alert(`Cierre mensual guardado correctamente para ${choice.snapshotLabel}`)
     } finally {
       setSavingSnapshot(false)
     }
@@ -729,7 +791,7 @@ export default function Page() {
             </button>
 
             <button
-              onClick={handleSaveSnapshot}
+              onClick={() => setSaveModalOpen(true)}
               disabled={savingSnapshot}
               style={{
                 padding: "12px 16px",
@@ -1631,6 +1693,143 @@ export default function Page() {
           </div>
         </div>
       </div>
+
+      {saveModalOpen ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(2,6,23,0.78)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 760,
+              background: "#0f172a",
+              border: "1px solid #1e293b",
+              borderRadius: 28,
+              padding: 24,
+              boxShadow: "0 30px 80px rgba(0,0,0,0.45)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+              <div>
+                <div style={{ color: "#22d3ee", fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase" }}>
+                  Confirmación de cierre
+                </div>
+                <h3 style={{ margin: "10px 0 0 0", color: "white", fontSize: 28 }}>
+                  Elegí qué mes querés guardar
+                </h3>
+                <p style={{ color: "#94a3b8", marginTop: 10, marginBottom: 0 }}>
+                  Fecha de hoy: {snapshotSaveChoices.todayLabel}. Esto evita guardar por error el mes equivocado.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setSaveModalOpen(false)}
+                disabled={savingSnapshot}
+                style={{
+                  border: "1px solid #334155",
+                  background: "#020617",
+                  color: "#cbd5e1",
+                  borderRadius: 14,
+                  padding: "10px 12px",
+                  cursor: savingSnapshot ? "default" : "pointer",
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 16,
+                marginTop: 24,
+              }}
+            >
+              {[snapshotSaveChoices.recommended, snapshotSaveChoices.alternate].map((choice, idx) => {
+                const recommended = idx === 0
+
+                return (
+                  <div
+                    key={choice.snapshotKey}
+                    style={{
+                      background: recommended ? "rgba(34,211,238,0.08)" : "#020617",
+                      border: `1px solid ${recommended ? "rgba(34,211,238,0.28)" : "#1e293b"}`,
+                      borderRadius: 22,
+                      padding: 18,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        padding: "6px 10px",
+                        borderRadius: 999,
+                        border: `1px solid ${recommended ? "#22d3ee" : "#334155"}`,
+                        color: recommended ? "#67e8f9" : "#94a3b8",
+                        fontSize: 12,
+                        marginBottom: 14,
+                      }}
+                    >
+                      {recommended ? "Recomendado" : "Alternativa"}
+                    </div>
+
+                    <div style={{ color: "white", fontSize: 24, fontWeight: 700 }}>{choice.snapshotLabel}</div>
+                    <div style={{ color: "#94a3b8", fontSize: 14, marginTop: 8 }}>
+                      Key: {choice.snapshotKey}
+                    </div>
+                    <div style={{ color: "#94a3b8", fontSize: 14, marginTop: 6 }}>
+                      Fecha de cierre: {new Date(choice.snapshotDate).toLocaleDateString("es-AR")}
+                    </div>
+                    <div style={{ color: recommended ? "#67e8f9" : "#cbd5e1", fontSize: 14, marginTop: 12, minHeight: 42 }}>
+                      {choice.description}
+                    </div>
+
+                    <button
+                      onClick={() => handleSaveSnapshot(choice)}
+                      disabled={savingSnapshot}
+                      style={{
+                        marginTop: 18,
+                        width: "100%",
+                        padding: "12px 16px",
+                        borderRadius: 16,
+                        border: `1px solid ${recommended ? "#065f46" : "#334155"}`,
+                        background: recommended ? "#166534" : "#0f172a",
+                        color: "white",
+                        cursor: savingSnapshot ? "default" : "pointer",
+                        opacity: savingSnapshot ? 0.7 : 1,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {savingSnapshot ? "Guardando..." : `Guardar ${choice.snapshotLabel}`}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div
+              style={{
+                marginTop: 18,
+                color: "#94a3b8",
+                fontSize: 13,
+                lineHeight: 1.5,
+              }}
+            >
+              Si guardás dos veces el mismo mes, el snapshot se actualiza. Los meses anteriores no se pisan.
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   )
 }
