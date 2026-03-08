@@ -29,7 +29,7 @@ export async function GET() {
     })
 
     const values = (res.data.values ?? []) as string[][]
-    const rows = mapPortfolioRows(values, "marzo")
+    const rows = mapPortfolioRows(values, "actual")
 
     return Response.json({
       ok: true,
