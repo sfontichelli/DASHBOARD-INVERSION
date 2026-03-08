@@ -331,6 +331,32 @@ const ytdReturn =
         ? point.portfolioTotalWithOptions
         : point.portfolioTotalWithoutOptions,
     }))
+// =============================
+// Portfolio Risk Metrics
+// =============================
+
+const portfolioSeries = chartData.map((p) => p.portfolioTotal)
+
+let peak = -Infinity
+let maxDrawdown = 0
+
+for (const v of portfolioSeries) {
+  if (v > peak) peak = v
+  const dd = (v - peak) / peak
+  if (dd < maxDrawdown) maxDrawdown = dd
+}
+
+const maxDrawdownPct = maxDrawdown * 100
+
+// CAGR
+let cagr = 0
+if (history.length > 0) {
+  const first = history[0].portfolioTotalWithOptions
+  const years = history.length / 12
+  if (first && years > 0) {
+    cagr = (Math.pow(portfolioTotal / first, 1 / years) - 1) * 100
+  }
+}
 
     if (!base.length || base[base.length - 1].portfolioTotal !== portfolioTotal) {
       base.push({
@@ -571,6 +597,19 @@ const ytdReturn =
             sub="recorrido capturado hacia targets"
             subColor="#94a3b8"
           />
+          <Card
+  title="Max Drawdown"
+  value={`${maxDrawdownPct.toFixed(1)}%`}
+  sub="caída máxima desde pico"
+  subColor="#fca5a5"
+/>
+
+<Card
+  title="CAGR"
+  value={`${cagr.toFixed(1)}%`}
+  sub="crecimiento anualizado"
+  subColor="#22d3ee"
+/>
         </div>
 
         <div
